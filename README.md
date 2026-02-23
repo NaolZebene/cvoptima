@@ -52,8 +52,12 @@ cd cvoptima
 cd backend && npm install
 cd ../frontend && npm install
 
-# Start services with Docker
-docker-compose up -d mongodb redis
+# Start services with Docker (uses backend/.env automatically)
+docker compose up -d mongodb redis
+
+# Default host ports in this repo:
+# MongoDB -> localhost:27018
+# Redis   -> localhost:6380
 
 # Start backend (development)
 cd backend && npm run dev
@@ -65,13 +69,13 @@ cd frontend && npm start
 ### Production Deployment
 ```bash
 # Build and run all services
-docker-compose up --build -d
+docker compose up --build -d
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Stop services
-docker-compose down
+docker compose down
 ```
 
 ## 📊 Development Workflow
@@ -113,13 +117,15 @@ npm run test:e2e
 Create `.env` files:
 - `backend/.env` - Backend configuration
 - `frontend/.env` - Frontend configuration
-- `.env` - Docker Compose variables
 
 See `.env.example` files for required variables.
 
+For local frontend API calls, use:
+- `REACT_APP_API_URL=http://localhost:3000/api/v1`
+
 ### Third‑Party Services
 1. **Stripe**: Payment processing
-2. **Whisper API**: Speech‑to‑text
+2. **OpenAI Whisper API (optional)**: Speech‑to‑text
 3. **LinkedIn API**: Profile integration
 4. **Job APIs**: Indeed, Glassdoor, Adzuna
 

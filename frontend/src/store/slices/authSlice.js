@@ -2,6 +2,9 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import authService from '../../services/authService';
 import { setAuthToken, removeAuthToken } from '../../utils/auth';
 
+const getApiErrorMessage = (error, fallback) =>
+  error.response?.data?.error || error.response?.data?.message || fallback;
+
 // Async thunks
 export const login = createAsyncThunk(
   'auth/login',
@@ -11,7 +14,7 @@ export const login = createAsyncThunk(
       setAuthToken(response.data.token);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Login failed');
+      return rejectWithValue(getApiErrorMessage(error, 'Login failed'));
     }
   }
 );
@@ -24,7 +27,7 @@ export const register = createAsyncThunk(
       setAuthToken(response.data.token);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Registration failed');
+      return rejectWithValue(getApiErrorMessage(error, 'Registration failed'));
     }
   }
 );
@@ -37,7 +40,7 @@ export const logout = createAsyncThunk(
       removeAuthToken();
       return null;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Logout failed');
+      return rejectWithValue(getApiErrorMessage(error, 'Logout failed'));
     }
   }
 );
@@ -49,7 +52,7 @@ export const getCurrentUser = createAsyncThunk(
       const response = await authService.getCurrentUser();
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to get user');
+      return rejectWithValue(getApiErrorMessage(error, 'Failed to get user'));
     }
   }
 );
@@ -141,7 +144,7 @@ const authSlice = createSlice({
       .addCase(getCurrentUser.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = true;
-        state.user = action.payload;
+        state.user = action.payload?.user || action.payload;
         state.error = null;
       })
       .addCase(getCurrentUser.rejected, (state, action) => {

@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { getAuthToken, removeAuthToken } from '../utils/auth';
+import normalizeApiBase from './apiBase';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api/v1';
+const API_URL = normalizeApiBase(process.env.REACT_APP_API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
@@ -40,10 +41,14 @@ api.interceptors.response.use(
 const authService = {
   // Register new user
   async register(email, password, name) {
+    const [firstName = '', ...rest] = (name || '').trim().split(/\s+/);
+    const lastName = rest.join(' ');
+
     const response = await api.post('/auth/register', {
       email,
       password,
-      name,
+      firstName: firstName || undefined,
+      lastName: lastName || undefined,
     });
     return response;
   },

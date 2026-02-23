@@ -26,6 +26,13 @@ const WHISPER_CONFIG = {
 };
 
 /**
+ * Resolve OpenAI API key.
+ * Supports legacy WHISPER_API_KEY for backward compatibility.
+ * @returns {string|undefined}
+ */
+const getOpenAIApiKey = () => process.env.OPENAI_API_KEY || process.env.WHISPER_API_KEY;
+
+/**
  * Validate audio file
  * @param {string} filePath - Path to audio file
  * @returns {Promise<Object>} Validation result
@@ -95,7 +102,7 @@ const transcribeAudio = async (filePath, options = {}) => {
     }
     
     // Check API key
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = getOpenAIApiKey();
     if (!apiKey) {
       throw createError('OpenAI API key not configured', 500, 'ConfigurationError');
     }
@@ -279,7 +286,7 @@ const translateAudio = async (filePath, targetLanguage = 'en', options = {}) => 
     }
     
     // Check API key
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = getOpenAIApiKey();
     if (!apiKey) {
       throw createError('OpenAI API key not configured', 500, 'ConfigurationError');
     }
@@ -418,7 +425,7 @@ const getSupportedLanguages = () => {
 const getServiceConfig = () => {
   return {
     ...WHISPER_CONFIG,
-    apiKeyConfigured: !!process.env.OPENAI_API_KEY,
+    apiKeyConfigured: !!getOpenAIApiKey(),
     maxFileSizeHuman: `${WHISPER_CONFIG.maxFileSize / (1024 * 1024)}MB`,
     supportedFormats: WHISPER_CONFIG.supportedFormats,
     maxAudioDurationHuman: `${WHISPER_CONFIG.maxAudioDuration / 60} minutes`

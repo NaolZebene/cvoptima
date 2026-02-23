@@ -87,6 +87,9 @@ const requireRole = (...roles) => {
   };
 };
 
+// Compatibility helper for existing routes
+const requireAdmin = requireRole('admin');
+
 /**
  * Require active subscription
  * @param {string} minSubscription - Minimum subscription level required
@@ -224,6 +227,7 @@ const validate = (schema) => {
 
 module.exports = {
   authenticate,
+  requireAdmin,
   requireRole,
   requireSubscription,
   optionalAuth,

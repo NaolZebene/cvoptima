@@ -15,6 +15,7 @@ import {
   RefreshIcon,
   CheckCircleIcon,
   ExclamationCircleIcon,
+  InformationCircleIcon,
   ChevronRightIcon,
 } from '@heroicons/react/outline';
 

@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { getAuthToken } from '../utils/auth';
+import normalizeApiBase from './apiBase';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api/v1';
+const API_URL = normalizeApiBase(process.env.REACT_APP_API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
@@ -126,7 +127,7 @@ const cvService = {
 
   // Share CV with token
   async shareCV(cvId, expiresIn = '7d') {
-    const response = await api.post(`/cv/${id}/share`, {
+    const response = await api.post(`/cv/${cvId}/share`, {
       expiresIn,
     });
     return response;
@@ -140,7 +141,7 @@ const cvService = {
 
   // Download CV file
   async downloadCV(cvId) {
-    const response = await api.get(`/cv/${id}/download`, {
+    const response = await api.get(`/cv/${cvId}/download`, {
       responseType: 'blob',
     });
     return response;
@@ -148,13 +149,13 @@ const cvService = {
 
   // Process CV (extract text, analyze, etc.)
   async processCV(cvId) {
-    const response = await api.post(`/cv/${id}/process`);
+    const response = await api.post(`/cv/${cvId}/process`);
     return response;
   },
 
   // Get CV processing status
   async getProcessingStatus(cvId) {
-    const response = await api.get(`/cv/${id}/status`);
+    const response = await api.get(`/cv/${cvId}/status`);
     return response;
   },
 
@@ -166,7 +167,7 @@ const cvService = {
 
   // Export CV data
   async exportCVData(cvId, format = 'json') {
-    const response = await api.get(`/cv/${id}/export`, {
+    const response = await api.get(`/cv/${cvId}/export`, {
       params: { format },
       responseType: 'blob',
     });
@@ -190,7 +191,7 @@ const cvService = {
 
   // Apply template to CV
   async applyTemplate(cvId, templateId) {
-    const response = await api.post(`/cv/${id}/template`, {
+    const response = await api.post(`/cv/${cvId}/template`, {
       templateId,
     });
     return response;
@@ -198,7 +199,7 @@ const cvService = {
 
   // Generate CV preview
   async generatePreview(cvId, templateId = 'default') {
-    const response = await api.get(`/cv/${id}/preview`, {
+    const response = await api.get(`/cv/${cvId}/preview`, {
       params: { templateId },
       responseType: 'blob',
     });
@@ -207,7 +208,7 @@ const cvService = {
 
   // Optimize CV for specific job
   async optimizeForJob(cvId, jobDescription, optimizationLevel = 'standard') {
-    const response = await api.post(`/cv/${id}/optimize`, {
+    const response = await api.post(`/cv/${cvId}/optimize`, {
       jobDescription,
       optimizationLevel,
     });

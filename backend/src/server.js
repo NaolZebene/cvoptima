@@ -56,13 +56,15 @@ app.get('/health', (req, res) => {
 
 // API version route
 app.get('/api/v1', (req, res) => {
+  const voiceEndpoint = config.enableVoice ? '/api/v1/voice' : 'disabled';
+
   res.status(200).json({
     message: 'CVOptima API v1',
     endpoints: {
       auth: '/api/v1/auth',
       cv: '/api/v1/cv',
       payment: '/api/v1/payment',
-      voice: '/api/v1/voice'
+      voice: voiceEndpoint
     },
     documentation: '/api/v1/docs'
   });
@@ -85,8 +87,13 @@ app.use('/api/v1/extract', extractionRoutes);
 app.use('/api/v1/ats', atsRoutes);
 app.use('/api/v1/scores', scoreHistoryRoutes);
 app.use('/api/v1/subscriptions', subscriptionRoutes);
-app.use('/api/v1/voice', voiceRoutes);
+if (config.enableVoice) {
+  app.use('/api/v1/voice', voiceRoutes);
+}
 app.use('/api/v1/admin', adminRoutes);
+
+// Backward-compatible auth alias for older frontend configs
+app.use('/auth', authRoutes);
 
 // Test route for development
 if (!isProduction()) {

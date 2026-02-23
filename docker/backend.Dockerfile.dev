@@ -1,0 +1,14 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install backend dependencies (including dev dependencies for nodemon)
+COPY backend/package*.json ./
+RUN npm install
+
+# Copy backend source for initial image state; bind mounts override in dev
+COPY backend/ ./
+
+EXPOSE 3000
+
+CMD ["npm", "run", "dev"]

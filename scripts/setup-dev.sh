@@ -44,8 +44,10 @@ JWT_EXPIRES_IN=7d
 STRIPE_SECRET_KEY=REPLACE_WITH_YOUR_STRIPE_TEST_SECRET_KEY  # Get from: https://dashboard.stripe.com/test/apikeys
 STRIPE_PUBLISHABLE_KEY=pk_test_XXXXXXXXXXXXXXXXXXXXXXXX
 
-# Whisper API
-WHISPER_API_KEY=your_whisper_api_key_here
+# Voice transcription (optional - OpenAI Whisper)
+OPENAI_API_KEY=
+# Legacy fallback (optional)
+WHISPER_API_KEY=
 
 # LinkedIn (development)
 LINKEDIN_CLIENT_ID=your_linkedin_client_id
@@ -62,7 +64,7 @@ APP_URL=http://localhost:3000
 FRONTEND_URL=http://localhost:3001
 
 # Feature flags
-ENABLE_VOICE=true
+ENABLE_VOICE=false
 ENABLE_STRIPE=true
 EOF
 
@@ -71,9 +73,9 @@ cp backend/.env.example backend/.env
 
 # Frontend .env.example
 cat > frontend/.env.example << 'EOF'
-REACT_APP_API_URL=http://localhost:3000
+REACT_APP_API_URL=http://localhost:3000/api/v1
 REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_test_XXXXXXXXXXXXXXXXXXXXXXXX
-REACT_APP_WHISPER_ENABLED=true
+REACT_APP_WHISPER_ENABLED=false
 REACT_APP_LINKEDIN_CLIENT_ID=your_linkedin_client_id
 EOF
 
@@ -85,8 +87,6 @@ echo "🐳 Setting up Docker development environment..."
 
 # Create docker-compose.override.yml for development
 cat > docker-compose.override.yml << 'EOF'
-version: '3.8'
-
 services:
   backend:
     build:
@@ -113,19 +113,6 @@ services:
     command: npm start
     ports:
       - "3001:3000"
-
-  mongodb:
-    ports:
-      - "27017:27017"
-
-  redis:
-    ports:
-      - "6379:6379"
-
-  rabbitmq:
-    ports:
-      - "5672:5672"
-      - "15672:15672"
 EOF
 
 echo "✅ Development environment setup complete!"
@@ -133,6 +120,6 @@ echo ""
 echo "📋 Next steps:"
 echo "1. Update backend/.env with your actual API keys"
 echo "2. Update frontend/.env with your actual configuration"
-echo "3. Start services: docker-compose up -d"
+echo "3. Start services: docker compose up -d"
 echo "4. Run tests: cd backend && npm test"
 echo "5. Start development: cd frontend && npm start"

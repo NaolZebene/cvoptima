@@ -211,7 +211,7 @@ router.post(
  * Health check for voice service
  */
 router.get('/health', (req, res) => {
-  const whisperConfigured = !!process.env.OPENAI_API_KEY;
+  const whisperConfigured = !!(process.env.OPENAI_API_KEY || process.env.WHISPER_API_KEY);
   const serviceStatus = whisperConfigured ? 'operational' : 'degraded';
   
   res.status(200).json({

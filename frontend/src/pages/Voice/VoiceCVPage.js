@@ -11,7 +11,7 @@ import {
   TrashIcon,
   DownloadIcon,
   ClockIcon,
-  LanguageIcon,
+  TranslateIcon,
   CheckCircleIcon,
   ExclamationCircleIcon,
   InformationCircleIcon,
@@ -273,7 +273,7 @@ I'm passionate about clean code, agile methodologies, and mentoring junior devel
               {/* Language selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <LanguageIcon className="inline h-4 w-4 mr-1" />
+                  <TranslateIcon className="inline h-4 w-4 mr-1" />
                   Select Language
                 </label>
                 <div className="grid grid-cols-3 md:grid-cols-6 gap-2">

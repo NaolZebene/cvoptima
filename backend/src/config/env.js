@@ -46,8 +46,8 @@ const getConfig = () => ({
   stripeSecretKey: process.env.STRIPE_SECRET_KEY,
   stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
   
-  // Whisper API
-  whisperApiKey: process.env.WHISPER_API_KEY,
+  // Whisper/OpenAI API
+  whisperApiKey: process.env.OPENAI_API_KEY || process.env.WHISPER_API_KEY,
   
   // LinkedIn
   linkedinClientId: process.env.LINKEDIN_CLIENT_ID,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { register, clearError } from '../../store/slices/authSlice';
+import { register as registerUser, clearError } from '../../store/slices/authSlice';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 
@@ -81,7 +81,7 @@ const RegisterPage = () => {
 
     setIsLoading(true);
     try {
-      await dispatch(register({
+      await dispatch(registerUser({
         email: data.email,
         password: data.password,
         name: data.name,

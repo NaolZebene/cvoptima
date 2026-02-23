@@ -1,19 +1,12 @@
-version: '3.8'
-
 services:
   mongodb:
     image: mongo:6
     container_name: cvoptima-mongodb
     restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password}
-      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-cvoptima}
     volumes:
       - mongodb_data:/data/db
-      - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     ports:
-      - "27017:27017"
+      - "${MONGO_HOST_PORT:-27018}:27017"
     networks:
       - cvoptima-network
     healthcheck:
@@ -30,7 +23,7 @@ services:
     volumes:
       - redis_data:/data
     ports:
-      - "6379:6379"
+      - "${REDIS_HOST_PORT:-6380}:6379"
     networks:
       - cvoptima-network
     healthcheck:
@@ -45,16 +38,13 @@ services:
       dockerfile: docker/backend.Dockerfile
     container_name: cvoptima-backend
     restart: unless-stopped
+    env_file:
+      - ./backend/.env
     environment:
       NODE_ENV: production
       PORT: 3000
-      MONGODB_URI: mongodb://${MONGO_USER:-cvuser}:${MONGO_PASSWORD:-cvpassword}@mongodb:27017/${MONGO_DATABASE:-cvoptima}?authSource=admin
+      MONGODB_URI: ${DOCKER_MONGODB_URI:-mongodb://mongodb:27017/cvoptima}
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET}
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
-      WHISPER_API_KEY: ${WHISPER_API_KEY}
-      LINKEDIN_CLIENT_ID: ${LINKEDIN_CLIENT_ID}
-      LINKEDIN_CLIENT_SECRET: ${LINKEDIN_CLIENT_SECRET}
     ports:
       - "3000:3000"
     depends_on:
@@ -68,7 +58,13 @@ services:
       - ./backend:/app
       - /app/node_modules
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3000/health',(r)=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -80,16 +76,11 @@ services:
     container_name: cvoptima-frontend
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "${FRONTEND_HOST_PORT:-8081}:80"
     depends_on:
       - backend
     networks:
       - cvoptima-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   nginx:
     image: nginx:alpine

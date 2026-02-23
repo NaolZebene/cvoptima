@@ -29,13 +29,17 @@ const Layout = ({ children }) => {
   const navigate = useNavigate();
   
   const { user, isAuthenticated } = useSelector((state) => state.auth);
-  const { cvs } = useSelector((state) => state.cv);
 
   const handleLogout = () => {
     dispatch(logout());
     dispatch(clearCurrentCV());
     navigate('/login');
   };
+
+  // Public pages should not render app sidebar/navigation.
+  if (!isAuthenticated) {
+    return <div className="min-h-screen bg-gray-50">{children}</div>;
+  }
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon, current: true },
