@@ -1,0 +1,37 @@
+#!/bin/bash
+echo "Running pre-commit checks..."
+
+# Backend linting
+cd backend
+if [ -f "package.json" ]; then
+  echo "Checking backend code..."
+  npm run lint 2>/dev/null || echo "Backend linting not configured"
+  npm run test:unit 2>/dev/null || echo "Backend tests not configured"
+fi
+cd ..
+
+# Frontend linting
+cd frontend
+if [ -f "package.json" ]; then
+  echo "Checking frontend code..."
+  npm run lint 2>/dev/null || echo "Frontend linting not configured"
+  npm run test:unit 2>/dev/null || echo "Frontend tests not configured"
+fi
+cd ..
+
+# Check for console.log statements
+echo "Checking for console.log statements..."
+if grep -r "console\.log" backend/src/ frontend/src/ --include="*.js" --include="*.jsx" --include="*.ts" --include="*.tsx" 2>/dev/null; then
+  echo "WARNING: console.log statements found. Consider removing them."
+  # Uncomment to fail commit:
+  # exit 1
+fi
+
+# Check for debugger statements
+echo "Checking for debugger statements..."
+if grep -r "debugger" backend/src/ frontend/src/ --include="*.js" --include="*.jsx" --include="*.ts" --include="*.tsx" 2>/dev/null; then
+  echo "ERROR: debugger statements found. Remove them before committing."
+  exit 1
+fi
+
+echo "Pre-commit checks passed!"

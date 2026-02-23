@@ -1,0 +1,29 @@
+#!/bin/bash
+echo "Running pre-push checks..."
+
+# Run all tests
+cd backend
+if [ -f "package.json" ]; then
+  echo "Running backend tests..."
+  npm test 2>/dev/null || { echo "Backend tests failed"; exit 1; }
+fi
+cd ..
+
+cd frontend
+if [ -f "package.json" ]; then
+  echo "Running frontend tests..."
+  npm test 2>/dev/null || { echo "Frontend tests failed"; exit 1; }
+fi
+cd ..
+
+# Build check
+echo "Checking build..."
+cd backend
+npm run build 2>/dev/null || { echo "Backend build failed"; exit 1; }
+cd ..
+
+cd frontend
+npm run build 2>/dev/null || { echo "Frontend build failed"; exit 1; }
+cd ..
+
+echo "All pre-push checks passed!"

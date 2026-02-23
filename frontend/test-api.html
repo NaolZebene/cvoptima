@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CVOptima API Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 800px;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .status-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .status-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .status-badge {
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .status-badge.success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .status-badge.error {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .status-badge.loading {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+        }
+        
+        .test-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .test-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .test-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border-color: #4f46e5;
+        }
+        
+        .test-card.success {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+        
+        .test-card.error {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+        
+        .test-card.loading {
+            border-color: #f59e0b;
+            background: #fffbeb;
+        }
+        
+        .test-name {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #1e293b;
+        }
+        
+        .test-result {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            background: #f1f5f9;
+            padding: 10px;
+            border-radius: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .button {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
+        }
+        
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .api-url {
+            font-family: monospace;
+            background: #1e293b;
+            color: #f1f5f9;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: inline-block;
+        }
+        
+        .instructions {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 30px;
+            border-left: 4px solid #4f46e5;
+        }
+        
+        .instructions h3 {
+            color: #1e293b;
+            margin-bottom: 15px;
+        }
+        
+        .instructions ol {
+            margin-left: 20px;
+            color: #475569;
+        }
+        
+        .instructions li {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .spinner {
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 CVOptima API Test</h1>
+            <p>Test the backend API connectivity and functionality</p>
+        </div>
+        
+        <div class="content">
+            <div class="status-card">
+                <div class="status-header">
+                    <div class="status-title">Backend Status</div>
+                    <div id="statusBadge" class="status-badge loading">Checking...</div>
+                </div>
+                <div class="api-url" id="apiUrl">http://localhost:3000/api/v1</div>
+                <div id="statusMessage">Connecting to backend API...</div>
+            </div>
+            
+            <div class="test-section">
+                <div class="test-title">🧪 API Endpoint Tests</div>
+                <div class="test-grid" id="testGrid">
+                    <!-- Test cards will be inserted here -->
+                </div>
+                <div class="button-group">
+                    <button class="button" onclick="runAllTests()">
+                        <span>▶️ Run All Tests</span>
+                    </button>
+                    <button class="button" onclick="runHealthCheck()">
+                        <span>🔍 Health Check</span>
+                    </button>
+                    <button class="button" onclick="testAuthFlow()">
+                        <span>🔐 Test Auth Flow</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="instructions">
+                <h3>📋 Next Steps</h3>
+                <ol>
+                    <li><strong>Verify API connectivity</strong> - All tests should pass (green cards)</li>
+                    <li><strong>Install frontend dependencies</strong> - Run: <code>cd cvoptima/frontend && npm install</code></li>
+                    <li><strong>Start React development server</strong> - Run: <code>npm start</code></li>
+                    <li><strong>Open the application</strong> - Visit <code>http://localhost:3001</code> in your browser</li>
+                    <li><strong>Test the full application</strong> - Register, login, upload CV, explore features</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3000/api/v1';
+        let testResults = {};
+        
+        // Test configurations
+        const tests = [
+            {
+                id: 'health',
+                name: 'Health Check',
+                endpoint: '/health',
+                method: 'GET',
+                description: 'Check if backend is running'
+            },
+            {
+                id: 'register',
+                name: 'User Registration',
+                endpoint: '/auth/register',
+                method: 'POST',
+                description: 'Register a new user',
+                data: {
+                    email: `test${Date.now()}@example.com`,
+                    password: 'password123',
+                    name: 'Test User'
+                }
+            },
+            {
+                id: 'login',
+                name: 'User Login',
+                endpoint: '/auth/login',
+                method: 'POST',
+                description: 'Login with credentials',
+                data: {
+                    email: 'test@example.com',
+                    password: 'password123'
+                }
+            },
+            {
+                id: 'dashboard',
+                name: 'Dashboard Access',
+                endpoint: '/dashboard',
+                method: 'GET',
+                description: 'Access dashboard with auth',
+                requiresAuth: true
+            },
+            {
+                id: 'upload',
+                name: 'CV Upload (Mock)',
+                endpoint: '/cv/upload',
+                method: 'POST',
+                description: 'Upload CV file',
+                data: {
+                    cvFile: 'mock',
+                    jobDescription: 'Test job',
+                    industry: 'technology'
+                }
+            }
+        ];
+        
+        // Initialize test grid
+        function initTestGrid() {
+            const grid = document.getElementById('testGrid');
+            grid.innerHTML = '';
+            
+            tests.forEach(test => {
+                const card = document.createElement('div');
+                card.className = 'test-card';
+                card.id = `testCard-${test.id}`;
+                card.innerHTML = `
+                    <div class="test-name">${test.name}</div>
+                    <div style="font-size: 0.9rem; color: #64748b; margin-bottom: 10px;">${test.description}</div>
+                    <div style="font-family: monospace; font-size: 0.8rem; color: #475569;">
+                        ${test.method} ${test.endpoint}
+                    </div>
+                    <div class="test-result" id="testResult-${test.id}">Click to run test</div>
+                `;
+                card.onclick = () => runTest(test.id);
+                grid.appendChild(card);
+            });
+        }
+        
+        // Update status badge
+        function updateStatus(status, message) {
+            const badge = document.getElementById('statusBadge');
+            const messageEl = document.getElementById('statusMessage');
+            
+            badge.className = 'status-badge ' + status;
+            badge.textContent = status === 'success' ? '✅ Online' : 
+                               status === 'error' ? '❌ Offline' : '⏳ Checking...';
+            
+            messageEl.textContent = message;
+            messageEl.style.color = status === 'success' ? '#10b981' : 
+                                   status === 'error' ? '#ef4444' : '#f59e0b';
+        }
+        
+        // Update test card
+        function updateTestCard(testId, status, result) {
+            const card = document.getElementById(`testCard-${testId}`);
+            const resultEl = document.getElementById(`testResult-${testId}`);
+            
+            card.className = `test-card ${status}`;
+            resultEl.textContent = result;
+            
+            if (status === 'success') {
+                resultEl.style.color = '#10b981';
+            } else if (status === 'error') {
+                resultEl.style.color = '#ef4444';
+            } else {
+                resultEl.style.color = '#f59e0b';
+            }
+        }
+        
+        // Run a single test
+        async function runTest(testId) {
+            const test = tests.find(t => t.id === testId);
+            if (!test) return;
+            
+            updateTestCard(testId, 'loading', 'Running test...');
+            
+            try {
+                const options = {
+                    method: test.method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
+                
+                if (test.data) {
+                    options.body = JSON.stringify(test.data);
+                }
+                
+                if (test.requiresAuth) {
+                    // Try to get a token from registration first
+                    const registerResponse = await fetch(`${API_BASE_URL}/auth/register`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: `authtest${Date.now()}@example.com`,
+                            password: 'password123',
+                            name: 'Auth Test User'
+                        })
+                    });
+                    
+                    if (!registerResponse.ok) {
+                        throw new Error('Failed to register test user');
+                    }
+                    
+                    const registerData = await registerResponse.json();
+                    options.headers.Authorization = `Bearer ${registerData.data.token}`;
+                }
+                
+                const response = await fetch(`${API_BASE_URL}${test.endpoint}`, options);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateTestCard(testId, 'success', 
+                        `✅ Success (${response.status})\n` +
+                        `Response: ${JSON.stringify(data, null, 2).substring(0, 200)}...`
+                    );
+                    testResults[testId] = { success: true, data };
+                } else {
+                    updateTestCard(testId, 'error',
+                        `❌ Failed (${response.status})\n` +
+                        `Error: ${data.message || 'Unknown error'}`
+                    );
+                    testResults[testId] = { success: false, error: data.message };
+                }
+            } catch (error) {
+                updateTestCard(testId, 'error',
+                    `❌ Error: ${error.message}`
+                );
+                testResults[testId] = { success: false, error: error.message };
+            }
+        }
+        
+        // Run health check
+        async function runHealthCheck() {
+            updateStatus('loading', 'Checking backend health...');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const data = await response.json();
+                
+                if (response.ok && data.status === 'ok') {
+                    updateStatus('success', 
+                        `Backend is running! Version: ${data.version}\n` +
+                        `Timestamp: ${new Date(data.timestamp).toLocaleString()}`
+                    );
+                    document.getElementById('apiUrl').textContent = API_BASE_URL;
+                } else {
+                    updateStatus('error', 
+                        `Backend responded with error: ${data.message || 'Unknown error'}`
+                    );
+                }
+            } catch (error) {
+                updateStatus('error', 
+                    `Cannot connect to backend: ${error.message}\n` +
+                    `Make sure the test server is running on port 3000`
+                );
+            }
+        }
+        
+        // Run all tests
+        async function runAllTests() {
+            updateStatus('loading', 'Running all tests...');
+            
+            for (const test of tests) {
+                await runTest(test.id);
+                await new Promise(resolve => setTimeout(resolve, 500)); // Small delay between tests
+            }
+            
+            // Check overall status
+            const passed = Object.values(testResults).filter(r => r?.success).length;
+            const total = tests.length;
+            
+            if (passed === total) {
+                updateStatus('success', `🎉 All ${total} tests passed! Backend is fully functional.`);
+            } else {
+                updateStatus('error', `${passed}/${total} tests passed. Some endpoints may have issues.`);
+            }
+        }
+        
+        // Test auth flow
+        async function testAuthFlow() {
+            updateStatus('loading', 'Testing authentication flow...');
+            
+            try {
+                // Register
+                const registerResponse = await fetch(`${API_BASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: `flowtest${Date.now()}@example.com`,
+                        password: 'password123',
+                        name: 'Flow Test User'
+                    })
+                });
+                
+                if (!registerResponse.ok) {
+                    throw new Error('Registration failed');
+                }
+                
+                const registerData = await registerResponse.json();
+                const token = registerData.data.token;
+                
+                // Login
+                const loginResponse = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: registerData.data.user.email,
+                        password: 'password123'
+                    })
+                });
+                
+                if (!loginResponse.ok) {
+                    throw new Error('Login failed');
+                }
+                
+                const loginData = await loginResponse.json();
+                
+                // Dashboard access
+                const dashboardResponse = await fetch(`${API_BASE_URL}/dashboard`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!dashboardResponse.ok) {
+                    throw new Error('Dashboard access failed');
+                }
+                
+                updateStatus('success                updateStatus(\"success\", 
+                    \"✅ Auth flow successful!\\n\" +
+                    \"• Registered: \" + registerData.data.user.email + \"\\n\" +
+                    \"• Token received: \" + token.substring(0, 20) + \"...\\n\" +
+                    \"• Dashboard access: Granted\"
+                );
+                
+            } catch (error) {
+                updateStatus(\"error\", 
+                    \"❌ Auth flow failed: \" + error.message
+                );
+            }
+        }
+        
+        // Initialize on load
+        document.addEventListener(\"DOMContentLoaded\", () => {
+            initTestGrid();
+            runHealthCheck();
+            document.getElementById(\"apiUrl\").textContent = API_BASE_URL;
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CVOptima - Complete Application Demo</title>
+    <style>
+        /* Global Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+        
+        body {
+            background: #f8fafc;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(79, 70, 229, 0.3);
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        /* Navigation */
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            background: white;
+            border-bottom: 2px solid #e2e8f0;
+            padding: 0 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .nav-tab {
+            padding: 1rem 1.5rem;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .nav-tab:hover {
+            color: #4f46e5;
+            background: #f1f5f9;
+        }
+        
+        .nav-tab.active {
+            color: #4f46e5;
+            border-bottom-color: #4f46e5;
+            background: #f8fafc;
+        }
+        
+        /* Content */
+        .content {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+        
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 2rem;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        
+        /* Dashboard */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border-color: #4f46e5;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #4f46e5;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Forms */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #1e293b;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #475569;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+        
+        /* Score Display */
+        .score-display {
+            text-align: center;
+            padding: 2rem;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-radius: 12px;
+            margin: 2rem 0;
+        }
+        
+        .score-value {
+            font-size: 4rem;
+            font-weight: 800;
+            color: #4f46e5;
+            margin-bottom: 0.5rem;
+        }
+        
+        .score-label {
+            font-size: 1.2rem;
+            color: #64748b;
+        }
+        
+        /* Status */
+        .status-success {
+            color: #10b981;
+            font-weight: 600;
+        }
+        
+        .status-error {
+            color: #ef4444;
+            font-weight: 600;
+        }
+        
+        .status-warning {
+            color: #f59e0b;
+            font-weight: 600;
+        }
+        
+        /* Backend Status */
+        .backend-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 10px;
+            padding: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            border: 2px solid #10b981;
+            z-index: 1000;
+            max-width: 300px;
+        }
+        
+        .backend-status h4 {
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .nav-tabs {
+                overflow-x: auto;
+                justify-content: flex-start;
+                padding: 0 1rem;
+            }
+            
+            .nav-tab {
+                padding: 0.75rem 1rem;
+                font-size: 0.9rem;
+                white-space: nowrap;
+            }
+            
+            .content {
+                padding: 0 1rem;
+            }
+            
+            .card {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1>🚀 CVOptima</h1>
+        <p>Complete CV Optimization Platform - Static Demo</p>
+        <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.7;">
+            Backend API: <strong>http://localhost:3000</strong> | Status: <span id="backendStatusText">Checking...</span>
+        </p>
+    </div>
+    
+    <!-- Navigation -->
+    <div class="nav-tabs">
+        <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
+        <button class="nav-tab" data-tab="upload">CV Upload</button>
+        <button class="nav-tab" data-tab="analysis">CV Analysis</button>
+        <button class="nav-tab" data-tab="voice">Voice CV</button>
+        <button class="nav-tab" data-tab="subscription">Subscription</button>
+        <button class="nav-tab" data-tab="settings">Settings</button>
+        <button class="nav-tab" data-tab="admin">Admin</button>
+    </div>
+    
+    <!-- Content -->
+    <div class="content">
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📊 Dashboard Overview</h2>
+                    <span class="status-success">Welcome back!</span>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">5</div>
+                        <div class="stat-label">Total CVs</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">78</div>
+                        <div class="stat-label">Average Score</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">89</div>
+                        <div class="stat-label">Best Score</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">0</div>
+                        <div class="stat-label">Voice Minutes</div>
+                    </div>
+                </div>
+                
+                <div class="score-display">
+                    <div class="score-value">78</div>
+                    <div class="score-label">Current ATS Score</div>
+                    <p style="margin-top: 1rem; color: #64748b;">Good score! Room for improvement.</p>
+                </div>
+                
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button class="btn btn-primary" onclick="showTab('upload')">
+                        📄 Upload New CV
+                    </button>
+                    <button class="btn btn-secondary" onclick="showTab('voice')">
+                        🎤 Create Voice CV
+                    </button>
+                    <button class="btn btn-secondary" onclick="showTab('analysis')">
+                        📈 View Analysis
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- CV Upload Tab -->
+        <div id="upload" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📄 Upload CV</h2>
+                </div>
+                
+                <div style="text-align: center; padding: 3rem 2rem; border: 3px dashed #e2e8f0; border-radius: 12px; margin-bottom: 2rem;">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">📁</div>
+                    <h3 style="margin-bottom: 0.5rem;">Drag & Drop CV File</h3>
+                    <p style="color: #64748b; margin-bottom: 1.5rem;">Supports PDF and DOCX files (max 10MB)</p>
+                    <button class="btn btn-primary" onclick="simulateUpload()">
+                        📁 Select File
+                    </button>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Job Description (Optional)</label>
+                    <textarea class="form-input" rows="4" placeholder="Paste the job description for targeted analysis..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Industry</label>
+                    <select class="form-input">
+                        <option value="">Select Industry</option>
+                        <option value="technology">Technology</option>
+                        <option value="finance">Finance</option>
+                        <option value="healthcare">Healthcare</option>
+                        <option value="marketing">Marketing</option>
+                    </select>
+                </div>
+                
+                <button class="btn btn-primary" onclick="simulateUpload()" style="width: 100%;">
+                    🚀 Upload & Analyze CV
+                </button>
+            </div>
+        </div>
+        
+        <!-- CV Analysis Tab -->
+        <div id="analysis" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📈 CV Analysis</h2>
+                    <span class="status-success">Score: 78/100</span>
+                </div>
+                
+                <div class="score-display">
+                    <div class="score-value">78</div>
+                    <div class="score-label">ATS Score</div>
+                    <p style="margin-top: 1rem; color: #64748b;">Good - Above average for your industry</p>
+                </div>
+                
+                <h3 style="margin: 2rem 0 1rem 0;">Improvement Suggestions</h3>
+                <div style="background: #f0fdf4; border: 2px solid #10b981; border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <h4 style="color: #10b981; margin-bottom: 0.5rem;">✅ Keywords (+5 points)</h4>
+                    <p>Add more industry-specific keywords from the job description.</p>
+                </div>
+                
+                <div style="background: #fffbeb; border: 2px solid #f59e0b; border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <h4 style="color: #f59e0b; margin-bottom: 0.5rem;">📊 Quantifiable Results (+8 points)</h4>
+                    <p>Include numbers and percentages to demonstrate impact (e.g., "increased sales by 35%").</p>
+                </div>
+                
+                <button class="btn btn-primary" onclick="showTab('upload')" style="width: 100%;">
+                    ✏️ Edit CV & Improve Score
+                </button>
+            </div>
+        </div>
+        
+        <!-- Voice CV Tab -->
+        <div id="voice" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🎤 Voice CV Creation</h2>
+                    <span class="status-warning">Premium Feature</span>
+                </div>
+                
+                <div style="text-align: center; padding: 2rem;">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">🎙️</div>
+                    <h3 style="margin-bottom: 0.5rem;">Create CV with Your Voice</h3>
+                    <p style="color: #64748b; margin-bottom: 1.5rem;">Record your experience and let AI create your CV</p>
+                    
+                    <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem;">
+                        <button class="btn btn-primary" onclick="simulateRecording()">
+                            ⏺️ Start Recording
+                        </button>
+                        <button class="btn btn-secondary" onclick="showTab('subscription')">
+                            ⭐ Upgrade to Premium
+                        </button>
+                    </div>
+                    
+                    <div style="background: #f8fafc; border-radius: 10px; padding: 1.5rem; text-align: left;">
+                        <h4 style="margin-bottom: 0.5rem;">Supported Languages:</h4>
+                        <p style="color: #64748b;">English, Spanish, French, German, Italian, Portuguese, and 6 more</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Subscription Tab -->
+        <div id="subscription" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">💰 Subscription Plans</h2>
+                    <span class="status-success">Current: Free Plan</span>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
+                    <div style="background: white; border: 2px solid #e2e8f0; border-radius: 12px; padding: 2rem; text-align: center;">
+                        <h3 style="color: #1e293b; margin-bottom: 1rem;">Free</h3>
+                        <div style="font-size: 2.5rem; font-weight: 800; color: #4f46e5; margin-bottom: 1rem;">€0</div>
+                        <ul style="text-align: left; list-style: none; padding: 0; margin-bottom: 1.5rem;">
+                            <li style="padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9;">✅ 1 CV per month</li>
+                            <li style="padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9;">✅ Basic ATS scoring</li>
+                            <li style="padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9;">❌ Watermarked exports</li>
+                            <li style="padding: 0.5rem 0;">❌ No voice features</li>
+                        </ul>
+                        <button class="btn btn-secondary" style="width: 100%;" disabled>
+                            Current Plan
+                        </button>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 2px solid #0ea5e9; border-radius: 12px; padding: 2rem; text-align: center;">
+                        <h3 style="color: #1e293b; margin-bottom: 1rem;">Basic</h3>
+                        <div style="font-size: 2.5rem; font-weight: 800; color: #0ea5e9; margin-bottom: 1rem;">€9.99<span style="font-size: 1rem; color: #64748b;">/month</span></div>
+                        <ul style="text-align: left; list-style: none; padding: 0; margin-bottom: 1.5rem;">
+                            <li style="padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9;">✅ 10 CVs per month</li>
+                            <li style="padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9;">✅ Advanced ATS scoring</li>
+                            <li style="padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9;">✅ Light watermark</li>
+                            <li style="padding: 0.5rem 0;">❌ No voice features</li>
+                        </ul>
+                        <button class="btn btn-primary" style="width: 100%;" onclick="upgradePlan('basic')">
+                            Upgrade to Basic
+                        </button>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #10b981; border-radius: 12px; padding: 2rem; text-align: center;">
+                        <h3 style="color: #1e293b; margin-bottom: 1rem;">Premium</h3>
+                        <div style="font-size: 2.5rem; font-weight: 800; color: #10b981; margin-bottom: 1rem;">€19.99<span style="font-size: 1rem; color: #64748b;">/month</span></div>
+                        <ul style="text-align: left; list-style: none; padding: 0; margin-bottom: 1.5rem;">
+                            <li style="padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9;">✅ Unlimited CVs</li>
+                            <li style="padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9;">✅ Premium ATS scoring</li>
+                            <li style="padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9;">✅ No watermark</li>
+                            <li style="padding: 0.5rem 0;">✅ Voice CV features</li>
+                        </ul>
+                        <button class="btn btn-primary" style="width: 100%; background: linear-gradient(135deg, #10b981 0%, #059669 100%);" onclick="upgradePlan('premium')">
+                            Upgrade to Premium
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Settings Tab -->
+        <div id="settings" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">⚙️ Settings</h2>
+                </div>
+                
+                <div style="display: flex; gap: 2rem; margin-bottom: 2rem;">
+                    <div style="flex: 1;">
+                        <h3 style="margin-bottom: 1rem;">Profile</h3>
+                        <div class="form-group">
+                            <label class="form-label">Name</label>
+                            <input class="form-input" type="text" value="Test User">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input class="form-input" type="email" value="test@example.com">
+                        </div>
+                        <button class="btn btn-primary">Save Profile</button>
+                    </div>
+                    
+                    <div style="flex: 1;">
+                        <h3 style="margin-bottom: 1rem;">Security</h3>
+                        <div class="form-group">
+                            <label class="form-label">Current Password</label>
+                            <input class="form-input" type="password">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">New Password</label>
+                            <input class="form-input" type="password">
+                        </div>
+                        <button class="btn btn-secondary">Change Password</button>
+                    </div>
+                </div>
+                
+                <div style="background: #f8fafc; border-radius: 10px; padding: 1.5rem;">
+                    <h3 style="margin-bottom: 1rem;">Data & Privacy</h3>
+                    <button class="btn btn-secondary" style="margin-right: 1rem;">
+                        📥 Export My Data
+                    </button>
+                    <button class="btn btn-secondary" style="background: #fef2f2; color: #dc2626; border-color: #fca5a5;">
+                        🗑️ Delete Account
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Admin Tab -->
+        <div id="admin" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">👑 Admin Dashboard</h2>
+                    <span class="status-warning">Admin Access Required</span>
+                </div>
+                
+                <div style="background: #fef2f2; border: 2px solid #fca5a5; border-radius: 10px; padding: 2rem; text-align: center; margin-bottom: 2rem;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div>
+                    <h3 style="color: #dc2626; margin-bottom: 0.5rem;">Admin Access Required</h3>
+                    <p style="color: #64748b;">This section is only accessible to users with admin privileges.</p>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                    <div style="background: white; border: 2px solid #e2e8f0; border-radius: 10px; padding: 1.5rem; text-align: center;">
+                        <div style="font-size: 2rem; font-weight: 800; color: #4f46e5;">1,247</div>
+                        <div style="color: #64748b; font-size: 0.9rem;">Total Users</div>
+                    </div>
+                    <div style="background: white; border: 2px solid #e2e8f0; border-radius: 10px; padding: 1.5rem; text-align: center;">
+                        <div style="font-size: 2rem; font-weight: 800; color: #10b981;">€2,548</div>
+                        <div style="color: #64748b; font-size: 0.9rem;">Monthly Revenue</div>
+                    </div>
+                    <div style="background: white; border: 2px solid #e2e8f0; border-radius: 10px; padding: 1.5rem; text-align: center;">
+                        <div style="font-size: 2rem; font-weight: 800; color: #f59e0b;">4.2%</div>
+                        <div style="color: #64748b; font-size: 0.9rem;">Conversion Rate</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Backend Status -->
+    <div class="backend-status" id="backendStatus">
+        <h4>🔗 Backend Status</h4>
+        <p id="backendStatusDetail">Checking connection...</p>
+    </div>
+    
+    <script>
+        // Tab navigation
+        function showTab(tabId) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabId).classList.add('active');
+            
+            // Activate corresponding tab button
+            document.querySelector(`.nav-tab[data-tab="${tabId}"]`).classList.add('active');
+        }
+        
+        // Initialize tab buttons
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                showTab(tab.dataset.tab);
+            });
+        });
+        
+        // Simulate file upload
+        function simulateUpload() {
+            alert('📁 In the real application, this would upload your CV file to the backend API.\n\nBackend API: http://localhost:3000/api/v1/cv/upload\n\nFor now, showing CV analysis...');
+            showTab('analysis');
+        }
+        
+        // Simulate voice recording
+        function simulateRecording() {
+            alert('🎤 Voice recording would start here.\n\nThis feature uses the Whisper API for transcription.\n\nRequires Premium subscription.');
+            showTab('subscription');
+        }
+        
+        // Upgrade plan
+        function upgradePlan(plan) {
+            alert(`💰 Upgrading to ${plan.toUpperCase()} plan!\n\nIn the real application, this would integrate with Stripe for payments.\n\nMonthly price: ${plan === 'basic' ? '€9.99' : '€19.99'}`);
+        }
+        
+        // Check backend status
+        async function checkBackendStatus() {
+            const statusText = document.getElementById('backendStatusText');
+            const statusDetail = document.getElementById('backendStatusDetail');
+            const statusBox = document.getElementById('backendStatus');
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/v1/health');
+                const data = await response.json();
+                
+                if (response.ok && data.status === 'ok') {
+                    statusText.textContent = '✅ Online';
+                    statusText.style.color = '#10b981';
+                    statusDetail.innerHTML = `
+                        <strong>✅ Backend Online</strong><br>
+                        Version: ${data.version}<br>
+                        ${new Date(data.timestamp).toLocaleTimeString()}
+                    `;
+                    statusBox.style.borderColor = '#10b981';
+                } else {
+                    throw new Error(data.message || 'Unknown error');
+                }
+            } catch (error) {
+                statusText.textContent = '❌ Offline';
+                statusText.style.color = '#ef4444';
+                statusDetail.innerHTML = `
+                    <strong>❌ Backend Offline</strong><br>
+                    Error: ${error.message}<br>
+                    Make sure backend is running on port 3000
+                `;
+                statusBox.style.borderColor = '#ef4444';
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check backend status immediately
+            checkBackendStatus();
+            
+            // Check every 30 seconds
+            setInterval(checkBackendStatus, 30000);
+            
+            // Show welcome message
+            setTimeout(() => {
+                console.log('🚀 CVOptima Static Demo Loaded!');
+                console.log('📊 Backend API: http://localhost:3000');
+                console.log('🎯 This demo shows all frontend pages without React installation');
+                console.log('💡 Next: Install React with "npm install" in frontend directory');
+            }, 1000);
+        });
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ctrl/Cmd + number shortcuts for tabs
+            if ((e.ctrlKey || e.metaKey) && e.key >= '1' && e.key <= '7') {
+                e.preventDefault();
+                const tabs = ['dashboard', 'upload', 'analysis', 'voice', 'subscription', 'settings', 'admin'];
+                const tabIndex = parseInt(e.key) - 1;
+                if (tabIndex < tabs.length) {
+                    showTab(tabs[tabIndex]);
+                }
+            }
+            
+            // F5 to check backend status
+            if (e.key === 'F5') {
+                e.preventDefault();
+                checkBackendStatus();
+                alert('🔄 Checking backend status...');
+            }
+        });
+    </script>
+</body>
+</html>
