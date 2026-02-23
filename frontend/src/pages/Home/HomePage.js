@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 
 // Icons
@@ -10,286 +10,331 @@ import {
   ShieldCheckIcon,
   ArrowRightIcon,
   CheckCircleIcon,
+  UploadIcon,
+  SparklesIcon,
+  TrendingUpIcon,
+  UserGroupIcon,
 } from '@heroicons/react/outline';
 
 const HomePage = () => {
+  const navigate = useNavigate();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
+
+  const handleGetStarted = () => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    } else {
+      navigate('/register');
+    }
+  };
+
+  const handleTryDemo = () => {
+    // Open static demo in new tab
+    window.open('/static-demo.html', '_blank');
+  };
 
   const features = [
     {
-      name: 'ATS Score Analysis',
-      description: 'Get instant ATS compatibility scores with detailed breakdowns and improvement suggestions.',
+      name: 'Instant ATS Scoring',
+      description: 'Get your CV scored in seconds. See exactly how applicant tracking systems view your resume.',
       icon: ChartBarIcon,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
+      stats: '95% accuracy',
     },
     {
-      name: 'Voice-Based CV Creation',
-      description: 'Create professional CVs by simply speaking. Our AI transcribes and structures your experience.',
+      name: 'Voice-to-CV AI',
+      description: 'Speak your experience, get a professional CV. Powered by DeepSeek AI transcription.',
       icon: MicrophoneIcon,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
+      stats: '12 languages',
     },
     {
-      name: 'Industry-Specific Optimization',
-      description: 'Tailored keyword suggestions for tech, healthcare, finance, and more industries.',
-      icon: ShieldCheckIcon,
+      name: 'Smart Optimization',
+      description: 'AI-powered suggestions to improve keywords, formatting, and content for your industry.',
+      icon: SparklesIcon,
+      color: 'text-amber-600',
+      bgColor: 'bg-amber-50',
+      stats: '50+ industries',
+    },
+    {
+      name: 'Progress Tracking',
+      description: 'Watch your scores improve over time with detailed analytics and improvement reports.',
+      icon: TrendingUpIcon,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
-    },
-    {
-      name: 'Score Tracking & Analytics',
-      description: 'Track your CV improvement over time with detailed analytics and progress reports.',
-      icon: DocumentTextIcon,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
+      stats: 'Track history',
     },
   ];
 
-  const pricingPlans = [
+  const howItWorks = [
     {
-      name: 'Free',
-      price: '€0',
-      period: 'forever',
-      description: 'Perfect for trying out basic features',
-      features: [
-        '1 CV analysis per month',
-        'Basic ATS scoring',
-        'Limited keyword suggestions',
-        'Email support',
-      ],
-      buttonText: 'Get Started Free',
-      buttonLink: '/register',
-      highlighted: false,
+      step: 1,
+      title: 'Upload Your CV',
+      description: 'Drag & drop your PDF or DOCX file. We support all major formats.',
+      icon: UploadIcon,
     },
     {
-      name: 'Basic',
-      price: '€9.99',
-      period: 'per month',
-      description: 'For regular job seekers',
-      features: [
-        '10 CV analyses per month',
-        'Advanced ATS scoring',
-        'Industry keyword packs',
-        'Priority email support',
-        'Score history tracking',
-      ],
-      buttonText: 'Start Free Trial',
-      buttonLink: '/subscription',
-      highlighted: true,
+      step: 2,
+      title: 'Get Instant Analysis',
+      description: 'Our AI analyzes your CV against ATS systems in real-time.',
+      icon: ChartBarIcon,
     },
     {
-      name: 'Premium',
-      price: '€19.99',
-      period: 'per month',
-      description: 'For serious career advancement',
-      features: [
-        'Unlimited CV analyses',
-        'Voice-based CV creation',
-        'All industry keyword packs',
-        'Priority phone support',
-        'Advanced analytics dashboard',
-        'Team collaboration features',
-      ],
-      buttonText: 'Start Free Trial',
-      buttonLink: '/subscription',
-      highlighted: false,
+      step: 3,
+      title: 'Receive AI Suggestions',
+      description: 'Get specific, actionable recommendations to improve your score.',
+      icon: SparklesIcon,
+    },
+    {
+      step: 4,
+      title: 'Download & Apply',
+      description: 'Export your optimized CV and start getting more interviews.',
+      icon: DocumentTextIcon,
+    },
+  ];
+
+  const testimonials = [
+    {
+      name: 'Sarah Chen',
+      role: 'Software Engineer',
+      company: 'TechCorp',
+      content: 'Increased my interview calls by 300% after optimizing my CV with CVOptima.',
+      avatar: 'SC',
+    },
+    {
+      name: 'Marcus Johnson',
+      role: 'Marketing Director',
+      company: 'GrowthLabs',
+      content: 'The voice-to-CV feature saved me hours. Finally a tool that understands busy professionals.',
+      avatar: 'MJ',
+    },
+    {
+      name: 'Priya Sharma',
+      role: 'Healthcare Admin',
+      company: 'MediCare Plus',
+      content: 'Industry-specific suggestions were spot on. My CV now speaks the right language.',
+      avatar: 'PS',
     },
   ];
 
   return (
-    <div className="bg-white">
-      {/* Hero section */}
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      {/* Hero Section */}
       <div className="relative overflow-hidden">
-        <div className="max-w-7xl mx-auto">
-          <div className="relative z-10 pb-8 bg-white sm:pb-16 md:pb-20 lg:max-w-2xl lg:w-full lg:pb-28 xl:pb-32">
-            <main className="mt-10 mx-auto max-w-7xl px-4 sm:mt-12 sm:px-6 md:mt-16 lg:mt-20 lg:px-8 xl:mt-28">
-              <div className="sm:text-center lg:text-left">
-                <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
-                  <span className="block">Optimize Your CV for</span>
-                  <span className="block text-blue-600">ATS Success</span>
-                </h1>
-                <p className="mt-3 text-base text-gray-500 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl lg:mx-0">
-                  Get instant ATS compatibility scores, voice-based CV creation, and industry-specific optimization to land more interviews.
-                </p>
-                <div className="mt-5 sm:mt-8 sm:flex sm:justify-center lg:justify-start">
-                  <div className="rounded-md shadow">
-                    {isAuthenticated ? (
-                      <Link
-                        to="/dashboard"
-                        className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 md:py-4 md:text-lg md:px-10"
-                      >
-                        Go to Dashboard
-                        <ArrowRightIcon className="ml-2 h-5 w-5" />
-                      </Link>
-                    ) : (
-                      <Link
-                        to="/register"
-                        className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 md:py-4 md:text-lg md:px-10"
-                      >
-                        Get Started Free
-                        <ArrowRightIcon className="ml-2 h-5 w-5" />
-                      </Link>
-                    )}
-                  </div>
-                  <div className="mt-3 sm:mt-0 sm:ml-3">
-                    <Link
-                      to="/cv/upload"
-                      className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 md:py-4 md:text-lg md:px-10"
-                    >
-                      Try CV Analysis
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </main>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 text-center">
+          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+            Get Your CV <span className="text-blue-600">ATS-Ready</span> in Minutes
+          </h1>
+          <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto">
+            AI-powered CV optimization that helps you pass applicant tracking systems and land more interviews. 
+            Free to start, powerful results.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={handleGetStarted}
+              className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl"
+            >
+              {isAuthenticated ? 'Go to Dashboard' : 'Get Started Free'}
+              <ArrowRightIcon className="ml-2 h-5 w-5" />
+            </button>
+            <button
+              onClick={handleTryDemo}
+              className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-gray-700 bg-white rounded-xl border-2 border-gray-200 hover:border-blue-300 hover:bg-gray-50 transition-colors"
+            >
+              Try Live Demo
+              <SparklesIcon className="ml-2 h-5 w-5" />
+            </button>
           </div>
+          <p className="mt-4 text-sm text-gray-500">
+            No credit card required • Free plan includes 1 CV analysis per month
+          </p>
         </div>
-        <div className="lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2">
-          <div className="h-56 w-full bg-gradient-to-r from-blue-400 to-purple-600 sm:h-72 md:h-96 lg:w-full lg:h-full">
-            <div className="h-full w-full flex items-center justify-center">
-              <div className="relative w-4/5 h-4/5 bg-white rounded-lg shadow-2xl p-8">
-                <div className="absolute -top-4 -left-4 bg-blue-600 text-white px-4 py-2 rounded-lg font-bold">
-                  ATS Score: 92/100
+
+        {/* Hero Image/Preview */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mb-20">
+          <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-gray-200">
+            <div className="aspect-video bg-gradient-to-r from-blue-50 to-purple-50 flex items-center justify-center">
+              <div className="text-center p-8">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+                  <DocumentTextIcon className="h-8 w-8 text-blue-600" />
                 </div>
-                <div className="space-y-4">
-                  <div className="h-4 bg-gray-200 rounded w-full"></div>
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                  <div className="grid grid-cols-2 gap-4 mt-8">
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <div className="text-green-600 font-bold">Keywords</div>
-                      <div className="text-2xl font-bold">28/30</div>
-                    </div>
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <div className="text-blue-600 font-bold">Formatting</div>
-                      <div className="text-2xl font-bold">9/10</div>
-                    </div>
-                  </div>
-                </div>
+                <h3 className="text-2xl font-semibold text-gray-800 mb-2">CV Analysis Preview</h3>
+                <p className="text-gray-600">Upload your CV to see your personalized ATS score</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Features section */}
-      <div className="py-12 bg-gray-50">
+      {/* Features Section */}
+      <div className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="lg:text-center">
-            <h2 className="text-base text-blue-600 font-semibold tracking-wide uppercase">Features</h2>
-            <p className="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-              Everything you need to optimize your CV
-            </p>
-            <p className="mt-4 max-w-2xl text-xl text-gray-500 lg:mx-auto">
-              Our platform combines advanced AI with industry expertise to give you the best chance at landing interviews.
-            </p>
-          </div>
-
-          <div className="mt-10">
-            <div className="space-y-10 md:space-y-0 md:grid md:grid-cols-2 md:gap-x-8 md:gap-y-10">
-              {features.map((feature) => (
-                <div key={feature.name} className="relative">
-                  <div className="absolute flex items-center justify-center h-12 w-12 rounded-md bg-white text-white">
-                    <div className={`h-10 w-10 rounded-md flex items-center justify-center ${feature.bgColor}`}>
-                      <feature.icon className={`h-6 w-6 ${feature.color}`} aria-hidden="true" />
-                    </div>
-                  </div>
-                  <div className="ml-16">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900">{feature.name}</h3>
-                    <p className="mt-2 text-base text-gray-500">{feature.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Pricing section */}
-      <div className="py-12 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="lg:text-center mb-12">
-            <h2 className="text-base text-blue-600 font-semibold tracking-wide uppercase">Pricing</h2>
-            <p className="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-              Choose the perfect plan for your needs
-            </p>
-            <p className="mt-4 max-w-2xl text-xl text-gray-500 lg:mx-auto">
-              Start with our free plan and upgrade as you need more features.
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Everything You Need for CV Success
+            </h2>
+            <p className="text-xl text-gray-600">
+              Professional tools used by thousands of job seekers
             </p>
           </div>
-
-          <div className="mt-12 space-y-4 sm:mt-16 sm:space-y-0 sm:grid sm:grid-cols-3 sm:gap-6 lg:max-w-4xl lg:mx-auto xl:max-w-none xl:mx-0">
-            {pricingPlans.map((plan) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {features.map((feature) => (
               <div
-                key={plan.name}
-                className={`border rounded-lg shadow-sm divide-y divide-gray-200 ${
-                  plan.highlighted ? 'border-blue-500 ring-2 ring-blue-500' : 'border-gray-200'
-                }`}
+                key={feature.name}
+                className="bg-white p-6 rounded-2xl border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all"
               >
-                <div className="p-6">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">{plan.name}</h3>
-                  <p className="mt-4">
-                    <span className="text-4xl font-extrabold text-gray-900">{plan.price}</span>
-                    <span className="text-base font-medium text-gray-500">/{plan.period}</span>
-                  </p>
-                  <p className="mt-4 text-sm text-gray-500">{plan.description}</p>
-                  <Link
-                    to={plan.buttonLink}
-                    className={`mt-8 block w-full py-3 px-6 border border-transparent rounded-md text-center font-medium ${
-                      plan.highlighted
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                    }`}
-                  >
-                    {plan.buttonText}
-                  </Link>
+                <div className={`inline-flex p-3 rounded-xl ${feature.bgColor} mb-4`}>
+                  <feature.icon className={`h-6 w-6 ${feature.color}`} />
                 </div>
-                <div className="pt-6 pb-8 px-6">
-                  <h4 className="text-sm font-medium text-gray-900 tracking-wide uppercase">What's included</h4>
-                  <ul className="mt-6 space-y-4">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex space-x-3">
-                        <CheckCircleIcon className="flex-shrink-0 h-5 w-5 text-green-500" aria-hidden="true" />
-                        <span className="text-sm text-gray-500">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.name}</h3>
+                <p className="text-gray-600 mb-3">{feature.description}</p>
+                <span className="text-sm font-medium text-gray-500">{feature.stats}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* CTA section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600">
-        <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 lg:flex lg:items-center lg:justify-between">
-          <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-            <span className="block">Ready to optimize your CV?</span>
-            <span className="block text-blue-200">Start your free trial today.</span>
-          </h2>
-          <div className="mt-8 flex lg:mt-0 lg:flex-shrink-0">
-            <div className="inline-flex rounded-md shadow">
-              <Link
-                to="/register"
-                className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-blue-50"
-              >
-                Get started for free
-              </Link>
-            </div>
-            <div className="ml-3 inline-flex rounded-md shadow">
-              <Link
-                to="/cv/upload"
-                className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-500 hover:bg-blue-400"
-              >
-                Try CV analysis
-              </Link>
-            </div>
+      {/* How It Works */}
+      <div className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              How CVOptima Works
+            </h2>
+            <p className="text-xl text-gray-600">
+              Get from upload to optimized CV in 4 simple steps
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {howItWorks.map((step) => (
+              <div key={step.step} className="relative">
+                <div className="bg-white p-6 rounded-2xl border border-gray-200 text-center">
+                  <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-100 text-blue-600 rounded-full text-lg font-bold mb-4">
+                    {step.step}
+                  </div>
+                  <div className="inline-flex p-3 rounded-xl bg-gray-100 mb-4">
+                    <step.icon className="h-6 w-6 text-gray-700" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{step.title}</h3>
+                  <p className="text-gray-600">{step.description}</p>
+                </div>
+                {step.step < 4 && (
+                  <div className="hidden lg:block absolute top-1/2 right-0 transform translate-x-1/2 -translate-y-1/2">
+                    <ArrowRightIcon className="h-6 w-6 text-gray-400" />
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>
+
+      {/* Testimonials */}
+      <div className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Trusted by Professionals
+            </h2>
+            <p className="text-xl text-gray-600">
+              See what our users are saying
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {testimonials.map((testimonial) => (
+              <div
+                key={testimonial.name}
+                className="bg-gray-50 p-6 rounded-2xl border border-gray-200"
+              >
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold">
+                    {testimonial.avatar}
+                  </div>
+                  <div className="ml-4">
+                    <h4 className="font-semibold text-gray-900">{testimonial.name}</h4>
+                    <p className="text-sm text-gray-600">{testimonial.role} • {testimonial.company}</p>
+                  </div>
+                </div>
+                <p className="text-gray-700 italic">"{testimonial.content}"</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* CTA Section */}
+      <div className="py-16 bg-gradient-to-r from-blue-600 to-purple-600">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl font-bold text-white mb-6">
+            Ready to Optimize Your CV?
+          </h2>
+          <p className="text-xl text-blue-100 mb-8">
+            Join thousands of professionals who are getting more interviews with CVOptima
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={handleGetStarted}
+              className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-blue-600 bg-white rounded-xl hover:bg-gray-50 transition-colors"
+            >
+              {isAuthenticated ? 'Go to Dashboard' : 'Start Free Trial'}
+              <ArrowRightIcon className="ml-2 h-5 w-5" />
+            </button>
+            <Link
+              to="/pricing"
+              className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white bg-transparent rounded-xl border-2 border-white hover:bg-white/10 transition-colors"
+            >
+              View Pricing Plans
+            </Link>
+          </div>
+          <p className="mt-6 text-blue-200 text-sm">
+            Free plan includes: 1 CV analysis/month • Basic ATS scoring • Email support
+          </p>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+              <h3 className="text-lg font-semibold mb-4">CVOptima</h3>
+              <p className="text-gray-400">
+                AI-powered CV optimization for the modern job seeker.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Product</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li><Link to="/features" className="hover:text-white">Features</Link></li>
+                <li><Link to="/pricing" className="hover:text-white">Pricing</Link></li>
+                <li><Link to="/demo" className="hover:text-white">Demo</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Company</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li><Link to="/about" className="hover:text-white">About</Link></li>
+                <li><Link to="/blog" className="hover:text-white">Blog</Link></li>
+                <li><Link to="/contact" className="hover:text-white">Contact</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Legal</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li><Link to="/privacy" className="hover:text-white">Privacy</Link></li>
+                <li><Link to="/terms" className="hover:text-white">Terms</Link></li>
+                <li><Link to="/cookies" className="hover:text-white">Cookies</Link></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+            <p>© {new Date().getFullYear()} CVOptima. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

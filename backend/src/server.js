@@ -29,7 +29,7 @@ app.use(helmet());
 const corsOptions = {
   origin: isProduction() 
     ? [config.frontendUrl, config.appUrl]
-    : ['http://localhost:3001', 'http://localhost:3000'],
+    : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003', 'http://localhost:5173', 'http://localhost:8080'],
   credentials: true,
   optionsSuccessStatus: 200
 };
@@ -79,6 +79,7 @@ const scoreHistoryRoutes = require('./routes/score-history.routes');
 const subscriptionRoutes = require('./routes/subscription.routes');
 const voiceRoutes = require('./routes/voice.routes');
 const adminRoutes = require('./routes/admin.routes');
+const stripeRoutes = require('./routes/stripe.routes');
 
 // API routes
 app.use('/api/v1/auth', authRoutes);
@@ -87,6 +88,7 @@ app.use('/api/v1/extract', extractionRoutes);
 app.use('/api/v1/ats', atsRoutes);
 app.use('/api/v1/scores', scoreHistoryRoutes);
 app.use('/api/v1/subscriptions', subscriptionRoutes);
+app.use('/api/v1/stripe', stripeRoutes);
 if (config.enableVoice) {
   app.use('/api/v1/voice', voiceRoutes);
 }

@@ -47,8 +47,8 @@ const authService = {
     const response = await api.post('/auth/register', {
       email,
       password,
-      firstName: firstName || undefined,
-      lastName: lastName || undefined,
+      firstName: firstName || 'User',
+      lastName: lastName || '',
     });
     return response;
   },

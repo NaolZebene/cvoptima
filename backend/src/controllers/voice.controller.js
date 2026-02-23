@@ -1,13 +1,14 @@
 /**
  * Voice Controller
  * Handles voice-based CV creation and audio processing
+ * Updated to use DeepSeek Speech API instead of Whisper
  */
 
 const fs = require('fs').promises;
 const path = require('path');
 const CV = require('../models/CV');
 const User = require('../models/User');
-const whisperService = require('../services/whisper-service');
+const deepseekSpeechService = require('../services/deepseek-speech-service');
 const textExtractionService = require('../services/text-extraction');
 const atsService = require('../services/ats-scoring');
 const scoreHistoryService = require('../services/score-history');
@@ -38,141 +39,113 @@ const uploadVoiceCV = async (req, res, next) => {
     }
     
     // Validate audio file
-    const validation = await whisperService.validateAudioFile(fileInfo.path);
+    await deepseekSpeechService.validateAudioFile(fileInfo.path, req.file.size);
     
-    if (!validation.isValid) {
-      // Cleanup uploaded file
-      try {
-        await fs.unlink(fileInfo.path);
-      } catch (cleanupError) {
-        console.error('Error cleaning up invalid file:', cleanupError);
-      }
-      
-      throw createError(validation.error, 400, 'ValidationError');
+    // Estimate cost
+    const audioDuration = req.body.duration || 60; // Default 60 seconds
+    const costEstimation = deepseekSpeechService.estimateCost(audioDuration);
+    
+    if (!costEstimation.withinLimits) {
+      throw createError(
+        `Audio exceeds free tier limits: ${costEstimation.message}`,
+        400,
+        'ValidationError'
+      );
     }
     
-    // Get transcription options from request
-    const { language, prompt, jobDescription } = req.body;
+    // Read audio file
+    const audioBuffer = await fs.readFile(fileInfo.path);
     
-    // Transcribe audio
-    const transcription = await whisperService.transcribeAudio(fileInfo.path, {
-      language,
-      prompt
+    // Transcribe audio using DeepSeek
+    const transcription = await deepseekSpeechService.transcribeAudio(audioBuffer, {
+      language: req.body.language || 'en',
+      prompt: req.body.prompt || 'Transcribe this CV information',
     });
     
-    // Create CV from transcription
-    const cv = await CV.create({
-      user: user._id,
-      originalFilename: fileInfo.originalName,
-      storedFilename: fileInfo.filename,
-      filePath: fileInfo.path,
-      fileSize: fileInfo.size,
-      mimeType: fileInfo.mimetype,
-      extension: fileInfo.extension,
-      status: 'processed',
-      uploadSource: 'voice',
-      extractedText: transcription.text,
-      textLength: transcription.text.length,
-      processedAt: new Date(),
-      processingTime: transcription.processingTime,
+    // Cleanup uploaded file
+    try {
+      await fs.unlink(fileInfo.path);
+    } catch (cleanupError) {
+      console.error('Error cleaning up audio file:', cleanupError);
+    }
+    
+    // Extract text from transcription
+    const extractedText = await textExtractionService.extractFromText(transcription.text);
+    
+    // Create CV from transcribed text
+    const cvData = {
+      userId: user._id,
+      originalText: transcription.text,
+      extractedData: extractedText,
+      source: 'voice',
+      audioInfo: {
+        duration: audioDuration,
+        language: transcription.language || req.body.language || 'en',
+        transcriptionId: transcription.id,
+      },
       metadata: {
-        voice: {
-          transcription: {
-            language: transcription.language || language || 'en',
-            duration: transcription.duration,
-            processingTime: transcription.processingTime,
-            timestamp: transcription.timestamp
-          },
-          fileInfo: transcription.fileInfo
-        }
+        fileName: fileInfo.originalname,
+        fileSize: req.file.size,
+        mimeType: req.file.mimetype,
+      }
+    };
+    
+    const cv = await CV.create(cvData);
+    
+    // Update user's voice usage
+    await User.findByIdAndUpdate(user._id, {
+      $inc: {
+        'usage.voiceTranscriptions.currentMonth.count': 1,
+        'usage.voiceTranscriptions.total': 1,
+        'usage.voiceTranscriptions.totalDuration': audioDuration,
+      },
+      $set: {
+        'funnel.firstVoiceUse': new Date(),
       }
     });
     
-    // Increment user's CV count
-    await user.incrementCvCount();
+    // Perform ATS analysis
+    const analysis = await atsService.analyzeCV(cv);
     
-    // Analyze CV text
-    const analysis = await atsService.calculateATSScore(
-      transcription.text,
-      null,
-      jobDescription
-    );
-    
-    // Update CV with analysis
-    cv.atsScore = analysis.score;
-    cv.atsAnalysis = {
-      keywords: analysis.keywordAnalysis.matchedKeywords,
-      sections: analysis.sectionAnalysis.sections,
-      suggestions: analysis.suggestions
-    };
-    
-    await cv.save({ validateBeforeSave: false });
-    
-    // Create score history entry
-    const scoreHistoryEntry = await scoreHistoryService.createScoreHistory({
-      cvId: cv._id,
+    // Save score history
+    await scoreHistoryService.createScoreHistory({
       userId: user._id,
-      score: analysis.score,
-      breakdown: analysis.breakdown,
-      analysis: {
-        keywordAnalysis: analysis.keywordAnalysis,
-        sectionAnalysis: analysis.sectionAnalysis,
-        lengthAnalysis: analysis.lengthAnalysis,
-        formattingAnalysis: analysis.formattingAnalysis,
-        actionVerbAnalysis: analysis.actionVerbAnalysis,
-        readabilityAnalysis: analysis.readabilityAnalysis
-      },
-      industry: analysis.industry,
-      metrics: analysis.metrics,
-      jobComparison: jobDescription ? {
-        jobTitle: analysis.jobTitle,
-        jobDescriptionLength: jobDescription.length,
-        cvJobFit: analysis.cvJobFit,
-        matchPercentage: analysis.keywordAnalysis.matchPercentage
-      } : null,
-      suggestions: analysis.suggestions,
-      analysisType: jobDescription ? 'job_comparison' : 'initial',
-      trigger: 'voice_upload',
-      notes: 'CV created from voice recording',
-      tags: ['voice', 'audio']
+      cvId: cv._id,
+      scores: analysis.scores,
+      overallScore: analysis.overallScore,
+      analysisType: 'voice',
     });
-    
-    // Prepare response
-    const cvResponse = cv.toJSON();
     
     res.status(201).json({
       success: true,
-      message: 'CV created from voice recording',
-      cv: cvResponse,
+      message: 'Voice CV created successfully',
+      cv: {
+        id: cv._id,
+        originalText: cv.originalText,
+        extractedData: cv.extractedData,
+        source: cv.source,
+        createdAt: cv.createdAt,
+      },
       transcription: {
         text: transcription.text,
-        language: transcription.language || language || 'en',
-        duration: transcription.duration,
-        processingTime: transcription.processingTime,
-        confidence: 'high' // Placeholder for confidence score
+        language: transcription.language,
+        duration: audioDuration,
       },
       analysis: {
-        score: analysis.score,
-        breakdown: analysis.breakdown,
-        industry: analysis.industry,
-        suggestions: analysis.suggestions
+        overallScore: analysis.overallScore,
+        scores: analysis.scores,
+        suggestions: analysis.suggestions,
       },
-      scoreHistoryId: scoreHistoryEntry?.id,
-      fileInfo: {
-        originalName: fileInfo.originalName,
-        size: fileInfo.size,
-        mimeType: fileInfo.mimetype,
-        duration: transcription.duration
-      }
+      cost: costEstimation,
     });
     
   } catch (error) {
-    // Cleanup uploaded file if error occurred
-    if (req.file && req.file.path) {
+    // Cleanup file if error occurred
+    if (req.file && req.fileInfo && req.fileInfo.path) {
       try {
-        await fs.unlink(req.file.path);
+        await fs.unlink(req.fileInfo.path);
       } catch (cleanupError) {
-        console.error('Error cleaning up file:', cleanupError);
+        console.error('Error cleaning up file after error:', cleanupError);
       }
     }
     
@@ -181,12 +154,11 @@ const uploadVoiceCV = async (req, res, next) => {
 };
 
 /**
- * Transcribe audio without creating CV
+ * Transcribe audio only (without creating CV)
  * POST /api/v1/voice/transcribe
  */
 const transcribeAudio = async (req, res, next) => {
   try {
-    // Check if file was uploaded
     if (!req.file) {
       throw createError('No audio file uploaded', 400, 'ValidationError');
     }
@@ -194,7 +166,7 @@ const transcribeAudio = async (req, res, next) => {
     const user = req.userObj;
     const fileInfo = req.fileInfo;
     
-    // Check if user can use voice features
+    // Check voice feature access
     const stripeService = require('../services/stripe-service');
     if (!stripeService.canPerformAction(user, 'use_voice_features')) {
       throw createError(
@@ -205,72 +177,56 @@ const transcribeAudio = async (req, res, next) => {
     }
     
     // Validate audio file
-    const validation = await whisperService.validateAudioFile(fileInfo.path);
+    await deepseekSpeechService.validateAudioFile(fileInfo.path, req.file.size);
     
-    if (!validation.isValid) {
-      // Cleanup uploaded file
-      try {
-        await fs.unlink(fileInfo.path);
-      } catch (cleanupError) {
-        console.error('Error cleaning up invalid file:', cleanupError);
-      }
-      
-      throw createError(validation.error, 400, 'ValidationError');
-    }
+    // Read audio file
+    const audioBuffer = await fs.readFile(fileInfo.path);
     
-    // Get transcription options from request
-    const { language, prompt, responseFormat = 'json' } = req.body;
-    
-    // Transcribe audio
-    const transcription = await whisperService.transcribeAudio(fileInfo.path, {
-      language,
-      prompt,
-      responseFormat
+    // Transcribe using DeepSeek
+    const transcription = await deepseekSpeechService.transcribeAudio(audioBuffer, {
+      language: req.body.language || 'en',
+      prompt: req.body.prompt,
+      response_format: req.body.response_format || 'json',
     });
     
-    // Cleanup uploaded file after transcription
+    // Cleanup uploaded file
     try {
       await fs.unlink(fileInfo.path);
     } catch (cleanupError) {
-      console.error('Error cleaning up file:', cleanupError);
+      console.error('Error cleaning up audio file:', cleanupError);
     }
     
-    // Prepare response based on format
-    let response;
+    // Update usage
+    const audioDuration = req.body.duration || 60;
+    await User.findByIdAndUpdate(user._id, {
+      $inc: {
+        'usage.voiceTranscriptions.currentMonth.count': 1,
+        'usage.voiceTranscriptions.total': 1,
+        'usage.voiceTranscriptions.totalDuration': audioDuration,
+      }
+    });
     
-    if (responseFormat === 'text') {
-      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-      return res.send(transcription.text);
-    } else {
-      response = {
-        success: true,
-        transcription: {
-          text: transcription.text,
-          language: transcription.language || language || 'en',
-          duration: transcription.duration,
-          processingTime: transcription.processingTime,
-          wordCount: transcription.text.split(/\s+/).length,
-          characterCount: transcription.text.length
-        },
-        fileInfo: {
-          originalName: fileInfo.originalName,
-          size: fileInfo.size,
-          mimeType: fileInfo.mimetype,
-          duration: transcription.duration
-        },
-        timestamp: new Date().toISOString()
-      };
-    }
-    
-    res.status(200).json(response);
+    res.status(200).json({
+      success: true,
+      message: 'Audio transcribed successfully',
+      transcription: {
+        text: transcription.text,
+        language: transcription.language,
+        duration: audioDuration,
+        wordCount: transcription.text.split(/\s+/).length,
+      },
+      metadata: {
+        model: transcription.model || 'deepseek-speech',
+        processingTime: transcription.processing_time,
+      }
+    });
     
   } catch (error) {
-    // Cleanup uploaded file if error occurred
-    if (req.file && req.file.path) {
+    if (req.file && req.fileInfo && req.fileInfo.path) {
       try {
-        await fs.unlink(req.file.path);
+        await fs.unlink(req.fileInfo.path);
       } catch (cleanupError) {
-        console.error('Error cleaning up file:', cleanupError);
+        console.error('Error cleaning up file after error:', cleanupError);
       }
     }
     
@@ -279,20 +235,24 @@ const transcribeAudio = async (req, res, next) => {
 };
 
 /**
- * Translate audio
+ * Translate audio to another language
  * POST /api/v1/voice/translate
  */
 const translateAudio = async (req, res, next) => {
   try {
-    // Check if file was uploaded
     if (!req.file) {
       throw createError('No audio file uploaded', 400, 'ValidationError');
     }
     
     const user = req.userObj;
     const fileInfo = req.fileInfo;
+    const { targetLanguage, sourceLanguage } = req.body;
     
-    // Check if user can use voice features
+    if (!targetLanguage) {
+      throw createError('Target language is required', 400, 'ValidationError');
+    }
+    
+    // Check voice feature access
     const stripeService = require('../services/stripe-service');
     if (!stripeService.canPerformAction(user, 'use_voice_features')) {
       throw createError(
@@ -303,73 +263,56 @@ const translateAudio = async (req, res, next) => {
     }
     
     // Validate audio file
-    const validation = await whisperService.validateAudioFile(fileInfo.path);
+    await deepseekSpeechService.validateAudioFile(fileInfo.path, req.file.size);
     
-    if (!validation.isValid) {
-      // Cleanup uploaded file
-      try {
-        await fs.unlink(fileInfo.path);
-      } catch (cleanupError) {
-        console.error('Error cleaning up invalid file:', cleanupError);
-      }
-      
-      throw createError(validation.error, 400, 'ValidationError');
-    }
+    // Read audio file
+    const audioBuffer = await fs.readFile(fileInfo.path);
     
-    // Get translation options from request
-    const { targetLanguage = 'en', prompt, responseFormat = 'json' } = req.body;
-    
-    // Translate audio
-    const translation = await whisperService.translateAudio(
-      fileInfo.path,
+    // Translate using DeepSeek
+    const translation = await deepseekSpeechService.translateAudio(audioBuffer, {
       targetLanguage,
-      { prompt, responseFormat }
-    );
+      sourceLanguage,
+      prompt: req.body.prompt,
+    });
     
-    // Cleanup uploaded file after translation
+    // Cleanup uploaded file
     try {
       await fs.unlink(fileInfo.path);
     } catch (cleanupError) {
-      console.error('Error cleaning up file:', cleanupError);
+      console.error('Error cleaning up audio file:', cleanupError);
     }
     
-    // Prepare response based on format
-    let response;
+    // Update usage
+    const audioDuration = req.body.duration || 60;
+    await User.findByIdAndUpdate(user._id, {
+      $inc: {
+        'usage.voiceTranscriptions.currentMonth.count': 1,
+        'usage.voiceTranscriptions.total': 1,
+        'usage.voiceTranscriptions.totalDuration': audioDuration,
+      }
+    });
     
-    if (responseFormat === 'text') {
-      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-      return res.send(translation.text);
-    } else {
-      response = {
-        success: true,
-        translation: {
-          text: translation.text,
-          originalLanguage: translation.translation?.originalLanguage || 'unknown',
-          targetLanguage: translation.translation?.targetLanguage || 'en',
-          duration: translation.duration,
-          processingTime: translation.processingTime,
-          wordCount: translation.text.split(/\s+/).length,
-          characterCount: translation.text.length
-        },
-        fileInfo: {
-          originalName: fileInfo.originalName,
-          size: fileInfo.size,
-          mimeType: fileInfo.mimetype,
-          duration: translation.duration
-        },
-        timestamp: new Date().toISOString()
-      };
-    }
-    
-    res.status(200).json(response);
+    res.status(200).json({
+      success: true,
+      message: 'Audio translated successfully',
+      translation: {
+        text: translation.text,
+        sourceLanguage: translation.source_language || sourceLanguage,
+        targetLanguage: translation.target_language || targetLanguage,
+        duration: audioDuration,
+      },
+      metadata: {
+        model: translation.model || 'deepseek-speech',
+        processingTime: translation.processing_time,
+      }
+    });
     
   } catch (error) {
-    // Cleanup uploaded file if error occurred
-    if (req.file && req.file.path) {
+    if (req.file && req.fileInfo && req.fileInfo.path) {
       try {
-        await fs.unlink(req.file.path);
+        await fs.unlink(req.fileInfo.path);
       } catch (cleanupError) {
-        console.error('Error cleaning up file:', cleanupError);
+        console.error('Error cleaning up file after error:', cleanupError);
       }
     }
     
@@ -378,17 +321,19 @@ const translateAudio = async (req, res, next) => {
 };
 
 /**
- * Get supported languages
+ * Get supported languages for speech recognition
  * GET /api/v1/voice/languages
  */
 const getSupportedLanguages = async (req, res, next) => {
   try {
-    const languages = whisperService.getSupportedLanguages();
+    const languages = deepseekSpeechService.getSupportedLanguages();
     
     res.status(200).json({
       success: true,
-      ...languages,
-      timestamp: new Date().toISOString()
+      message: 'Supported languages retrieved',
+      languages: languages.languages,
+      defaultLanguage: languages.defaultLanguage,
+      service: 'deepseek-speech',
     });
     
   } catch (error) {
@@ -397,23 +342,26 @@ const getSupportedLanguages = async (req, res, next) => {
 };
 
 /**
- * Get voice service configuration
+ * Get speech service configuration and limits
  * GET /api/v1/voice/config
  */
-const getVoiceConfig = async (req, res, next) => {
+const getServiceConfig = async (req, res, next) => {
   try {
-    const config = whisperService.getServiceConfig();
-    
-    // Remove sensitive information
-    const safeConfig = {
-      ...config,
-      apiKeyConfigured: undefined // Don't expose API key status
-    };
+    const config = deepseekSpeechService.config;
     
     res.status(200).json({
       success: true,
-      config: safeConfig,
-      timestamp: new Date().toISOString()
+      message: 'Service configuration retrieved',
+      config: {
+        maxFileSize: config.maxFileSize,
+        maxFileSizeMB: config.maxFileSize / (1024 * 1024),
+        supportedFormats: config.supportedFormats,
+        maxAudioDuration: config.maxAudioDuration,
+        maxAudioDurationMinutes: config.maxAudioDuration / 60,
+        defaultLanguage: config.defaultLanguage,
+        freeTierLimits: config.freeTierLimits,
+        service: 'deepseek-speech',
+      }
     });
     
   } catch (error) {
@@ -422,23 +370,24 @@ const getVoiceConfig = async (req, res, next) => {
 };
 
 /**
- * Estimate transcription cost
+ * Estimate cost for audio processing
  * POST /api/v1/voice/estimate-cost
  */
-const estimateTranscriptionCost = async (req, res, next) => {
+const estimateCost = async (req, res, next) => {
   try {
-    const { audioDuration } = req.body;
+    const { duration, service = 'transcription' } = req.body;
     
-    if (!audioDuration || audioDuration <= 0) {
-      throw createError('Valid audio duration is required', 400, 'ValidationError');
+    if (!duration || typeof duration !== 'number' || duration <= 0) {
+      throw createError('Valid duration is required', 400, 'ValidationError');
     }
     
-    const costEstimation = whisperService.estimateCost(audioDuration);
+    const costEstimation = deepseekSpeechService.estimateCost(duration, service);
     
     res.status(200).json({
       success: true,
+      message: 'Cost estimation completed',
       estimation: costEstimation,
-      timestamp: new Date().toISOString()
+      service: 'deepseek-speech',
     });
     
   } catch (error) {
@@ -448,172 +397,18 @@ const estimateTranscriptionCost = async (req, res, next) => {
 
 /**
  * Batch transcribe multiple audio files
- * POST /api/v1/voice/batch-transcribe
+ * POST /api/v1/voice/batch
  */
 const batchTranscribe = async (req, res, next) => {
   try {
-    // Check if files were uploaded
     if (!req.files || req.files.length === 0) {
       throw createError('No audio files uploaded', 400, 'ValidationError');
     }
     
     const user = req.userObj;
-    
-    // Check if user can use voice features
-    const stripeService = require('../services/stripe-service');
-    if (!stripeService.canPerformAction(user, 'use_voice_features')) {
-      throw createError(
-        'Batch voice features require premium subscription',
-        403,
-        'AuthorizationError'
-      );
-    }
-    
-    // Limit batch size
-    const maxBatchSize = 10;
-    if (req.files.length > maxBatchSize) {
-      throw createError(`Maximum ${maxBatchSize} files allowed per batch`, 400, 'ValidationError');
-    }
-    
-    // Get transcription options
     const { language, prompt } = req.body;
     
-    // Prepare files for batch processing
-    const files = req.files.map(file => ({
-      path: file.path,
-      language
-    }));
-    
-    // Batch transcribe
-    const results = await whisperService.batchTranscribe(files, { language, prompt });
-    
-    // Cleanup uploaded files
-    await Promise.all(
-      req.files.map(file => 
-        fs.unlink(file.path).catch(error => 
-          console.error('Error cleaning up file:', error)
-        )
-      )
-    );
-    
-    // Prepare response
-    const successful = results.filter(r => r.success);
-    const failed = results.filter(r => !r.success);
-    
-    res.status(200).json({
-      success: true,
-      batchId: `batch_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-      summary: {
-        total: results.length,
-        successful: successful.length,
-        failed: failed.length
-      },
-      results: results.map(result => ({
-        file: path.basename(result.file),
-        success: result.success,
-        ...(result.success ? {
-          transcription: {
-            text: result.result.text.substring(0, 500) + (result.result.text.length > 500 ? '...' : ''),
-            fullLength: result.result.text.length,
-            language: result.result.language,
-            duration: result.result.duration,
-            processingTime: result.result.processingTime
-          }
-        } : {
-          error: result.error
-        })
-      })),
-      timestamp: new Date().toISOString()
-    });
-    
-  } catch (error) {
-    // Cleanup uploaded files if error occurred
-    if (req.files) {
-      await Promise.all(
-        req.files.map(file => 
-          fs.unlink(file.path).catch(error => 
-            console.error('Error cleaning up file:', error)
-          )
-        )
-      );
-    }
-    
-    next(error);
-  }
-};
-
-/**
- * Get voice-based CVs for user
- * GET /api/v1/voice/cvs
- */
-const getVoiceCVs = async (req, res, next) => {
-  try {
-    const userId = req.user.id;
-    const { limit = 20, page = 1 } = req.query;
-    
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    
-    // Find voice-based CVs
-    const cvs = await CV.find({
-      user: userId,
-      uploadSource: 'voice'
-    })
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(parseInt(limit));
-    
-    const total = await CV.countDocuments({
-      user: userId,
-      uploadSource: 'voice'
-    });
-    
-    res.status(200).json({
-      success: true,
-      cvs: cvs.map(cv => cv.toJSON()),
-      pagination: {
-        total,
-        page: parseInt(page),
-        pages: Math.ceil(total / parseInt(limit)),
-        limit: parseInt(limit)
-      },
-      summary: {
-        totalVoiceCVs: total,
-        averageScore: cvs.length > 0 
-          ? Math.round(cvs.reduce((sum, cv) => sum + (cv.atsScore || 0), 0) / cvs.length)
-          : 0
-      }
-    });
-    
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Convert existing CV to voice notes
- * POST /api/v1/voice/cv/:id/convert
- */
-const convertCVToVoiceNotes = async (req, res, next) => {
-  try {
-    const cvId = req.params.id;
-    const userId = req.user.id;
-    
-    // Find CV
-    const cv = await CV.findOne({
-      _id: cvId,
-      user: userId
-    });
-    
-    if (!cv) {
-      throw createError('CV not found', 404, 'NotFoundError');
-    }
-    
-    if (!cv.extractedText) {
-      throw createError('CV text not extracted', 400, 'ValidationError');
-    }
-    
-    // Check if user can use voice features
-    const user = await User.findById(userId);
+    // Check voice feature access
     const stripeService = require('../services/stripe-service');
     if (!stripeService.canPerformAction(user, 'use_voice_features')) {
       throw createError(
@@ -623,155 +418,65 @@ const convertCVToVoiceNotes = async (req, res, next) => {
       );
     }
     
-    // Analyze text for voice conversion
-    const text = cv.extractedText;
-    
-    // Split into sections for voice notes
-    const sections = text.split(/\n\s*\n/).filter(section => section.trim().length > 0);
-    
-    // Create voice notes structure
-    const voiceNotes = sections.map((section, index) => {
-      const lines = section.split('\n');
-      const firstLine = lines[0].trim();
-      
-      // Try to identify section type
-      let sectionType = 'content';
-      const lowerFirstLine = firstLine.toLowerCase();
-      
-      if (lowerFirstLine.includes('experience') || lowerFirstLine.includes('work')) {
-        sectionType = 'experience';
-      } else if (lowerFirstLine.includes('education')) {
-        sectionType = 'education';
-      } else if (lowerFirstLine.includes('skill')) {
-        sectionType = 'skills';
-      } else if (lowerFirstLine.includes('summary') || lowerFirstLine.includes('objective')) {
-        sectionType = 'summary';
-      } else if (lowerFirstLine.includes('contact')) {
-        sectionType = 'contact';
-      }
-      
-      return {
-        id: `note_${index + 1}`,
-        sectionType,
-        title: firstLine,
-        content: section,
-        wordCount: section.split(/\s+/).length,
-        estimatedDuration: Math.ceil(section.split(/\s+/).length / 150), // ~150 words per minute
-        order: index + 1
-      };
-    });
-    
-    // Calculate total estimated duration
-    const totalDuration = voiceNotes.reduce((sum, note) => sum + note.estimatedDuration, 0);
-    
-    // Update CV with voice notes metadata
-    cv.metadata = {
-      ...cv.metadata,
-      voiceNotes: {
-        convertedAt: new Date(),
-        totalNotes: voiceNotes.length,
-        totalDuration,
-        sections: voiceNotes.map(note => ({
-          type: note.sectionType,
-          title: note.title,
-          duration: note.estimatedDuration
-        }))
-      }
-    };
-    
-    await cv.save({ validateBeforeSave: false });
-    
-    res.status(200).json({
-      success: true,
-      message: 'CV converted to voice notes',
-      cvId: cv._id,
-      voiceNotes: {
-        total: voiceNotes.length,
-        totalDuration,
-        estimatedReadingTime: `${totalDuration} minute${totalDuration !== 1 ? 's' : ''}`,
-        sections: voiceNotes
-      },
-      suggestions: [
-        'Use these notes for interview preparation',
-        'Practice reading each section aloud',
-        'Focus on key achievements in experience section',
-        'Highlight transferable skills'
-      ]
-    });
-    
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Get voice processing statistics
- * GET /api/v1/voice/stats
- */
-const getVoiceStats = async (req, res, next) => {
-  try {
-    const userId = req.user.id;
-    
-    // Get voice-based CVs
-    const voiceCVs = await CV.find({
-      user: userId,
-      uploadSource: 'voice'
-    });
-    
-    // Calculate statistics
-    const totalVoiceCVs = voiceCVs.length;
-    const totalTranscriptionTime = voiceCVs.reduce((sum, cv) => 
-      sum + (cv.metadata?.voice?.transcription?.processingTime || 0), 0
+    // Prepare files for batch processing
+    const files = await Promise.all(
+      req.files.map(async (file, index) => {
+        const fileInfo = req.filesInfo[index];
+        
+        // Validate each file
+        await deepseekSpeechService.validateAudioFile(fileInfo.path, file.size);
+        
+        const buffer = await fs.readFile(fileInfo.path);
+        
+        return {
+          id: `file_${index}_${Date.now()}`,
+          buffer,
+          language: language || 'en',
+          path: fileInfo.path,
+        };
+      })
     );
     
-    const averageScore = totalVoiceCVs > 0 
-      ? Math.round(voiceCVs.reduce((sum, cv) => sum + (cv.atsScore || 0), 0) / totalVoiceCVs)
-      : 0;
+    // Process batch
+    const results = await deepseekSpeechService.processBatch(files, { language, prompt });
     
-    // Get language distribution
-    const languageDistribution = {};
-    voiceCVs.forEach(cv => {
-      const language = cv.metadata?.voice?.transcription?.language || 'unknown';
-      languageDistribution[language] = (languageDistribution[language] || 0) + 1;
-    });
+    // Cleanup all uploaded files
+    await Promise.all(
+      files.map(file => fs.unlink(file.path).catch(() => {}))
+    );
     
-    // Get file type distribution
-    const fileTypeDistribution = {};
-    voiceCVs.forEach(cv => {
-      const extension = cv.extension.toLowerCase();
-      fileTypeDistribution[extension] = (fileTypeDistribution[extension] || 0) + 1;
+    // Update usage
+    const totalDuration = files.length * 60; // Estimate 60 seconds per file
+    await User.findByIdAndUpdate(user._id, {
+      $inc: {
+        'usage.voiceTranscriptions.currentMonth.count': files.length,
+        'usage.voiceTranscriptions.total': files.length,
+        'usage.voiceTranscriptions.totalDuration': totalDuration,
+      }
     });
     
     res.status(200).json({
       success: true,
-      stats: {
-        totalVoiceCVs,
-        averageScore,
-        totalTranscriptionTime: Math.round(totalTranscriptionTime / 1000), // Convert to seconds
-        averageTranscriptionTime: totalVoiceCVs > 0 
-          ? Math.round(totalTranscriptionTime / totalVoiceCVs / 1000)
-          : 0,
-        languageDistribution,
-        fileTypeDistribution,
-        firstVoiceCV: totalVoiceCVs > 0 
-          ? voiceCVs[voiceCVs.length - 1].createdAt // Oldest
-          : null,
-        lastVoiceCV: totalVoiceCVs > 0 
-          ? voiceCVs[0].createdAt // Newest
-          : null
-      },
-      insights: totalVoiceCVs > 0 ? [
-        `You've created ${totalVoiceCVs} CVs using voice`,
-        `Average ATS score: ${averageScore}/100`,
-        `Total transcription time: ${Math.round(totalTranscriptionTime / 1000)} seconds`,
-        `Most used language: ${Object.entries(languageDistribution).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A'}`
-      ] : [
-        'No voice CVs created yet',
-        'Try uploading an audio file to create your first voice CV'
-      ]
+      message: 'Batch transcription completed',
+      results,
+      summary: {
+        totalFiles: files.length,
+        successful: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length,
+        estimatedCost: deepseekSpeechService.estimateCost(totalDuration),
+      }
     });
     
   } catch (error) {
+    // Cleanup all files if error occurred
+    if (req.files && req.filesInfo) {
+      await Promise.all(
+        req.filesInfo.map(info => 
+          fs.unlink(info.path).catch(() => {})
+        )
+      );
+    }
+    
     next(error);
   }
 };
@@ -781,10 +486,7 @@ module.exports = {
   transcribeAudio,
   translateAudio,
   getSupportedLanguages,
-  getVoiceConfig,
-  estimateTranscriptionCost,
+  getServiceConfig,
+  estimateCost,
   batchTranscribe,
-  getVoiceCVs,
-  convertCVToVoiceNotes,
-  getVoiceStats
 };

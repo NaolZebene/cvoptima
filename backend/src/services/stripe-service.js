@@ -1,508 +1,507 @@
 /**
- * Stripe Payment Service
- * Handles payment processing, subscriptions, and customer management
+ * Stripe Payment Service - Fixed Implementation
+ * Complete payment processing with proper error handling
  */
 
 const Stripe = require('stripe');
 const { createError } = require('../middleware/error-handlers');
+const User = require('../models/User');
 
 /**
  * Initialize Stripe with API key
  */
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+const getStripe = () => {
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  
+  if (!stripeSecretKey || stripeSecretKey.startsWith('sk_test_XXXX')) {
+    throw new Error('Stripe secret key is not configured. Please set STRIPE_SECRET_KEY in environment variables.');
+  }
+  
+  return Stripe(stripeSecretKey);
+};
 
 /**
  * Subscription plans configuration
+ * You need to create these products and prices in your Stripe dashboard:
+ * 1. Go to https://dashboard.stripe.com/test/products
+ * 2. Create products: "CVOptima Basic", "CVOptima Premium"
+ * 3. Create monthly prices for each product
+ * 4. Copy the price IDs and add them to your .env file
  */
 const SUBSCRIPTION_PLANS = {
   free: {
+    id: 'free',
     name: 'Free',
     description: 'Basic CV analysis with limited features',
     priceId: null, // Free plan doesn't have a price ID
+    monthlyPrice: 0,
     features: [
-      '3 CV uploads per month',
+      '1 CV upload per month',
       'Basic ATS scoring',
       'PDF/DOCX support',
-      'Email support'
+      'Email support',
+      'Watermarked exports'
     ],
     limits: {
-      maxCvUploads: 3,
+      maxCvUploads: 1,
       maxFileSize: 10 * 1024 * 1024, // 10MB
-      maxAnalyses: 5,
+      maxAnalyses: 3,
       voiceFeatures: false,
       batchProcessing: false,
-      prioritySupport: false
+      prioritySupport: false,
+      watermarkExports: true
     }
   },
   
   basic: {
+    id: 'basic',
     name: 'Basic',
     description: 'Essential CV optimization tools',
     priceId: process.env.STRIPE_BASIC_PRICE_ID,
+    monthlyPrice: 9.99,
     features: [
       '10 CV uploads per month',
       'Advanced ATS scoring',
       'Job description matching',
       'Score history tracking',
+      'Light watermark exports',
       'Email support'
     ],
     limits: {
       maxCvUploads: 10,
       maxFileSize: 25 * 1024 * 1024, // 25MB
-      maxAnalyses: 20,
+      maxAnalyses: 50,
       voiceFeatures: false,
       batchProcessing: false,
-      prioritySupport: false
+      prioritySupport: false,
+      watermarkExports: true
     }
   },
   
   premium: {
+    id: 'premium',
     name: 'Premium',
-    description: 'Professional CV optimization suite',
+    description: 'Complete CV optimization suite',
     priceId: process.env.STRIPE_PREMIUM_PRICE_ID,
+    monthlyPrice: 19.99,
     features: [
       'Unlimited CV uploads',
-      'Advanced ATS scoring with AI suggestions',
-      'Voice-based CV creation',
-      'Batch processing',
+      'Premium ATS scoring',
+      'Voice-to-CV creation',
+      'No watermark exports',
       'Priority email support',
-      'Export functionality',
+      'Batch processing',
       'Advanced analytics'
     ],
     limits: {
-      maxCvUploads: 999, // Effectively unlimited
+      maxCvUploads: 9999, // Effectively unlimited
       maxFileSize: 50 * 1024 * 1024, // 50MB
-      maxAnalyses: 999,
+      maxAnalyses: 9999,
       voiceFeatures: true,
       batchProcessing: true,
-      prioritySupport: true
+      prioritySupport: true,
+      watermarkExports: false
     }
   }
 };
 
 /**
- * Create or retrieve Stripe customer
- * @param {Object} userData - User data
- * @returns {Promise<Object>} Stripe customer object
+ * Check if Stripe is properly configured
  */
-const createOrRetrieveCustomer = async (userData) => {
+const isStripeConfigured = () => {
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  return stripeSecretKey && !stripeSecretKey.startsWith('sk_test_XXXX');
+};
+
+/**
+ * Create a Stripe customer for a user
+ */
+const createCustomer = async (user) => {
   try {
-    const { userId, email, name } = userData;
+    const stripe = getStripe();
     
-    if (!email) {
-      throw createError('Email is required to create Stripe customer', 400, 'ValidationError');
-    }
-    
-    // Check if customer already exists
-    const existingCustomers = await stripe.customers.list({
-      email,
-      limit: 1
-    });
-    
-    if (existingCustomers.data.length > 0) {
-      return existingCustomers.data[0];
-    }
-    
-    // Create new customer
     const customer = await stripe.customers.create({
-      email,
-      name,
+      email: user.email,
+      name: user.fullName,
       metadata: {
-        userId,
-        source: 'cvoptima'
+        userId: user._id.toString(),
+        userEmail: user.email
       }
     });
     
     return customer;
-    
   } catch (error) {
-    if (error.type === 'StripeInvalidRequestError') {
-      throw createError(`Stripe API error: ${error.message}`, 400, 'PaymentError');
-    }
-    
-    throw createError(`Failed to create customer: ${error.message}`, 500, 'PaymentError');
+    console.error('Error creating Stripe customer:', error);
+    throw createError(
+      'Failed to create payment account',
+      500,
+      'PaymentError'
+    );
   }
 };
 
 /**
- * Get customer by ID
- * @param {string} customerId - Stripe customer ID
- * @returns {Promise<Object>} Customer object
+ * Create a checkout session for subscription
  */
-const getCustomer = async (customerId) => {
+const createCheckoutSession = async (user, priceId, successUrl, cancelUrl) => {
   try {
-    const customer = await stripe.customers.retrieve(customerId);
-    return customer;
-  } catch (error) {
-    if (error.type === 'StripeInvalidRequestError') {
-      throw createError('Customer not found', 404, 'NotFoundError');
+    const stripe = getStripe();
+    
+    // Get or create Stripe customer
+    let customerId = user.stripeCustomerId;
+    if (!customerId) {
+      const customer = await createCustomer(user);
+      customerId = customer.id;
+      
+      // Save customer ID to user
+      await User.findByIdAndUpdate(user._id, {
+        stripeCustomerId: customerId
+      });
     }
     
-    throw createError(`Failed to get customer: ${error.message}`, 500, 'PaymentError');
-  }
-};
-
-/**
- * Update customer
- * @param {string} customerId - Stripe customer ID
- * @param {Object} updates - Updates to apply
- * @returns {Promise<Object>} Updated customer
- */
-const updateCustomer = async (customerId, updates) => {
-  try {
-    const customer = await stripe.customers.update(customerId, updates);
-    return customer;
-  } catch (error) {
-    if (error.type === 'StripeInvalidRequestError') {
-      throw createError(`Invalid update: ${error.message}`, 400, 'ValidationError');
-    }
-    
-    throw createError(`Failed to update customer: ${error.message}`, 500, 'PaymentError');
-  }
-};
-
-/**
- * Create checkout session for subscription
- * @param {Object} sessionData - Session configuration
- * @returns {Promise<Object>} Checkout session
- */
-const createCheckoutSession = async (sessionData) => {
-  try {
-    const {
-      customerId,
-      priceId,
-      successUrl,
-      cancelUrl,
-      trialPeriodDays = 0,
-      metadata = {}
-    } = sessionData;
-    
-    if (!priceId) {
-      throw createError('Price ID is required', 400, 'ValidationError');
-    }
-    
+    // Create checkout session
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
       line_items: [
         {
           price: priceId,
-          quantity: 1
-        }
+          quantity: 1,
+        },
       ],
       mode: 'subscription',
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      subscription_data: {
-        trial_period_days: trialPeriodDays,
-        metadata
-      },
-      allow_promotion_codes: true,
-      billing_address_collection: 'required',
-      customer_update: {
-        address: 'auto',
-        name: 'auto'
+      success_url: successUrl || `${process.env.FRONTEND_URL}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: cancelUrl || `${process.env.FRONTEND_URL}/subscription`,
+      metadata: {
+        userId: user._id.toString(),
+        userEmail: user.email,
+        subscriptionType: Object.keys(SUBSCRIPTION_PLANS).find(
+          key => SUBSCRIPTION_PLANS[key].priceId === priceId
+        ) || 'unknown'
       }
     });
     
-    return session;
-    
+    return {
+      sessionId: session.id,
+      url: session.url
+    };
   } catch (error) {
-    if (error.type === 'StripeInvalidRequestError') {
-      throw createError(`Invalid checkout session: ${error.message}`, 400, 'ValidationError');
-    }
-    
-    throw createError(`Failed to create checkout session: ${error.message}`, 500, 'PaymentError');
+    console.error('Error creating checkout session:', error);
+    throw createError(
+      'Failed to create checkout session',
+      500,
+      'PaymentError'
+    );
   }
 };
 
 /**
- * Create portal session for customer management
- * @param {string} customerId - Stripe customer ID
- * @param {string} returnUrl - URL to return after portal session
- * @returns {Promise<Object>} Portal session
+ * Create a portal session for customer to manage subscription
  */
-const createPortalSession = async (customerId, returnUrl) => {
+const createPortalSession = async (user, returnUrl) => {
   try {
+    const stripe = getStripe();
+    
+    if (!user.stripeCustomerId) {
+      throw createError('No Stripe customer found', 400, 'ValidationError');
+    }
+    
     const session = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: returnUrl
+      customer: user.stripeCustomerId,
+      return_url: returnUrl || `${process.env.FRONTEND_URL}/subscription`
     });
     
-    return session;
-    
+    return {
+      sessionId: session.id,
+      url: session.url
+    };
   } catch (error) {
-    if (error.type === 'StripeInvalidRequestError') {
-      throw createError(`Invalid portal session: ${error.message}`, 400, 'ValidationError');
-    }
-    
-    throw createError(`Failed to create portal session: ${error.message}`, 500, 'PaymentError');
+    console.error('Error creating portal session:', error);
+    throw createError(
+      'Failed to create portal session',
+      500,
+      'PaymentError'
+    );
   }
 };
 
 /**
- * Get subscription by ID
- * @param {string} subscriptionId - Stripe subscription ID
- * @returns {Promise<Object>} Subscription object
+ * Get subscription details for a user
  */
-const getSubscription = async (subscriptionId) => {
+const getSubscription = async (user) => {
   try {
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
-      expand: ['customer', 'latest_invoice.payment_intent']
-    });
+    const stripe = getStripe();
     
-    return subscription;
-    
-  } catch (error) {
-    if (error.type === 'StripeInvalidRequestError') {
-      throw createError('Subscription not found', 404, 'NotFoundError');
+    if (!user.stripeCustomerId) {
+      return null;
     }
     
-    throw createError(`Failed to get subscription: ${error.message}`, 500, 'PaymentError');
-  }
-};
-
-/**
- * Cancel subscription
- * @param {string} subscriptionId - Stripe subscription ID
- * @param {boolean} cancelImmediately - Whether to cancel immediately or at period end
- * @returns {Promise<Object>} Cancelled subscription
- */
-const cancelSubscription = async (subscriptionId, cancelImmediately = false) => {
-  try {
-    const subscription = await stripe.subscriptions.update(subscriptionId, {
-      cancel_at_period_end: !cancelImmediately
-    });
-    
-    if (cancelImmediately) {
-      await stripe.subscriptions.del(subscriptionId);
-    }
-    
-    return subscription;
-    
-  } catch (error) {
-    if (error.type === 'StripeInvalidRequestError') {
-      throw createError(`Invalid subscription: ${error.message}`, 400, 'ValidationError');
-    }
-    
-    throw createError(`Failed to cancel subscription: ${error.message}`, 500, 'PaymentError');
-  }
-};
-
-/**
- * Update subscription
- * @param {string} subscriptionId - Stripe subscription ID
- * @param {Object} updates - Updates to apply
- * @returns {Promise<Object>} Updated subscription
- */
-const updateSubscription = async (subscriptionId, updates) => {
-  try {
-    const subscription = await stripe.subscriptions.update(subscriptionId, updates);
-    return subscription;
-  } catch (error) {
-    if (error.type === 'StripeInvalidRequestError') {
-      throw createError(`Invalid subscription update: ${error.message}`, 400, 'ValidationError');
-    }
-    
-    throw createError(`Failed to update subscription: ${error.message}`, 500, 'PaymentError');
-  }
-};
-
-/**
- * Get customer's subscriptions
- * @param {string} customerId - Stripe customer ID
- * @returns {Promise<Array>} Array of subscriptions
- */
-const getCustomerSubscriptions = async (customerId) => {
-  try {
+    // Get customer's subscriptions
     const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: 'all',
-      expand: ['data.default_payment_method']
+      customer: user.stripeCustomerId,
+      status: 'active',
+      limit: 1
     });
     
-    return subscriptions.data;
-    
-  } catch (error) {
-    if (error.type === 'StripeInvalidRequestError') {
-      throw createError(`Invalid customer: ${error.message}`, 400, 'ValidationError');
+    if (subscriptions.data.length === 0) {
+      return null;
     }
     
-    throw createError(`Failed to get subscriptions: ${error.message}`, 500, 'PaymentError');
+    const subscription = subscriptions.data[0];
+    const priceId = subscription.items.data[0].price.id;
+    
+    // Find which plan this price ID corresponds to
+    const plan = Object.values(SUBSCRIPTION_PLANS).find(
+      plan => plan.priceId === priceId
+    );
+    
+    return {
+      id: subscription.id,
+      status: subscription.status,
+      currentPeriodStart: new Date(subscription.current_period_start * 1000),
+      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      plan: plan || { id: 'unknown', name: 'Unknown Plan' }
+    };
+  } catch (error) {
+    console.error('Error getting subscription:', error);
+    return null;
   }
 };
 
 /**
- * Get customer's payment methods
- * @param {string} customerId - Stripe customer ID
- * @returns {Promise<Array>} Array of payment methods
+ * Cancel subscription at period end
  */
-const getCustomerPaymentMethods = async (customerId) => {
+const cancelSubscription = async (user) => {
   try {
-    const paymentMethods = await stripe.paymentMethods.list({
-      customer: customerId,
-      type: 'card'
-    });
+    const stripe = getStripe();
     
-    return paymentMethods.data;
-    
-  } catch (error) {
-    if (error.type === 'StripeInvalidRequestError') {
-      throw createError(`Invalid customer: ${error.message}`, 400, 'ValidationError');
+    const subscription = await getSubscription(user);
+    if (!subscription) {
+      throw createError('No active subscription found', 400, 'ValidationError');
     }
     
-    throw createError(`Failed to get payment methods: ${error.message}`, 500, 'PaymentError');
-  }
-};
-
-/**
- * Create payment intent for one-time payment
- * @param {Object} paymentData - Payment data
- * @returns {Promise<Object>} Payment intent
- */
-const createPaymentIntent = async (paymentData) => {
-  try {
-    const {
-      customerId,
-      amount,
-      currency = 'usd',
-      description,
-      metadata = {}
-    } = paymentData;
-    
-    if (!amount || amount < 50) { // Minimum $0.50
-      throw createError('Invalid amount', 400, 'ValidationError');
-    }
-    
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount,
-      currency,
-      customer: customerId,
-      description,
-      metadata,
-      automatic_payment_methods: {
-        enabled: true
-      }
-    });
-    
-    return paymentIntent;
-    
-  } catch (error) {
-    if (error.type === 'StripeInvalidRequestError') {
-      throw createError(`Invalid payment intent: ${error.message}`, 400, 'ValidationError');
-    }
-    
-    throw createError(`Failed to create payment intent: ${error.message}`, 500, 'PaymentError');
-  }
-};
-
-/**
- * Get invoice by ID
- * @param {string} invoiceId - Stripe invoice ID
- * @returns {Promise<Object>} Invoice object
- */
-const getInvoice = async (invoiceId) => {
-  try {
-    const invoice = await stripe.invoices.retrieve(invoiceId);
-    return invoice;
-  } catch (error) {
-    if (error.type === 'StripeInvalidRequestError') {
-      throw createError('Invoice not found', 404, 'NotFoundError');
-    }
-    
-    throw createError(`Failed to get invoice: ${error.message}`, 500, 'PaymentError');
-  }
-};
-
-/**
- * Get customer's invoices
- * @param {string} customerId - Stripe customer ID
- * @param {Object} options - Query options
- * @returns {Promise<Array>} Array of invoices
- */
-const getCustomerInvoices = async (customerId, options = {}) => {
-  try {
-    const invoices = await stripe.invoices.list({
-      customer: customerId,
-      limit: options.limit || 10,
-      starting_after: options.startingAfter
-    });
-    
-    return invoices.data;
-    
-  } catch (error) {
-    if (error.type === 'StripeInvalidRequestError') {
-      throw createError(`Invalid customer: ${error.message}`, 400, 'ValidationError');
-    }
-    
-    throw createError(`Failed to get invoices: ${error.message}`, 500, 'PaymentError');
-  }
-};
-
-/**
- * Create usage record for metered billing
- * @param {string} subscriptionItemId - Subscription item ID
- * @param {number} quantity - Usage quantity
- * @param {number} timestamp - Unix timestamp for usage
- * @returns {Promise<Object>} Usage record
- */
-const createUsageRecord = async (subscriptionItemId, quantity, timestamp = Math.floor(Date.now() / 1000)) => {
-  try {
-    const usageRecord = await stripe.subscriptionItems.createUsageRecord(
-      subscriptionItemId,
+    const canceledSubscription = await stripe.subscriptions.update(
+      subscription.id,
       {
-        quantity,
-        timestamp,
-        action: 'increment'
+        cancel_at_period_end: true
       }
     );
     
-    return usageRecord;
-    
+    return {
+      id: canceledSubscription.id,
+      status: canceledSubscription.status,
+      cancelAtPeriodEnd: canceledSubscription.cancel_at_period_end,
+      canceledAt: new Date(canceledSubscription.canceled_at * 1000),
+      currentPeriodEnd: new Date(canceledSubscription.current_period_end * 1000)
+    };
   } catch (error) {
-    if (error.type === 'StripeInvalidRequestError') {
-      throw createError(`Invalid usage record: ${error.message}`, 400, 'ValidationError');
+    console.error('Error canceling subscription:', error);
+    throw createError(
+      'Failed to cancel subscription',
+      500,
+      'PaymentError'
+    );
+  }
+};
+
+/**
+ * Reactivate canceled subscription
+ */
+const reactivateSubscription = async (user) => {
+  try {
+    const stripe = getStripe();
+    
+    const subscription = await getSubscription(user);
+    if (!subscription) {
+      throw createError('No subscription found', 400, 'ValidationError');
     }
     
-    throw createError(`Failed to create usage record: ${error.message}`, 500, 'PaymentError');
+    const reactivatedSubscription = await stripe.subscriptions.update(
+      subscription.id,
+      {
+        cancel_at_period_end: false
+      }
+    );
+    
+    return {
+      id: reactivatedSubscription.id,
+      status: reactivatedSubscription.status,
+      cancelAtPeriodEnd: reactivatedSubscription.cancel_at_period_end
+    };
+  } catch (error) {
+    console.error('Error reactivating subscription:', error);
+    throw createError(
+      'Failed to reactivate subscription',
+      500,
+      'PaymentError'
+    );
   }
 };
 
 /**
- * Get subscription plans
- * @returns {Object} Subscription plans configuration
+ * Update subscription to a different plan
  */
-const getSubscriptionPlans = () => {
-  return SUBSCRIPTION_PLANS;
-};
-
-/**
- * Get plan by name
- * @param {string} planName - Plan name (free, basic, premium)
- * @returns {Object} Plan configuration
- */
-const getPlan = (planName) => {
-  const plan = SUBSCRIPTION_PLANS[planName.toLowerCase()];
-  
-  if (!plan) {
-    throw createError(`Invalid plan: ${planName}`, 400, 'ValidationError');
+const updateSubscription = async (user, newPriceId) => {
+  try {
+    const stripe = getStripe();
+    
+    const subscription = await getSubscription(user);
+    if (!subscription) {
+      throw createError('No active subscription found', 400, 'ValidationError');
+    }
+    
+    const updatedSubscription = await stripe.subscriptions.update(
+      subscription.id,
+      {
+        items: [{
+          id: subscription.items?.data[0]?.id,
+          price: newPriceId,
+        }],
+        proration_behavior: 'create_prorations'
+      }
+    );
+    
+    return {
+      id: updatedSubscription.id,
+      status: updatedSubscription.status,
+      currentPeriodEnd: new Date(updatedSubscription.current_period_end * 1000)
+    };
+  } catch (error) {
+    console.error('Error updating subscription:', error);
+    throw createError(
+      'Failed to update subscription',
+      500,
+      'PaymentError'
+    );
   }
-  
-  return plan;
 };
 
 /**
- * Check if user can perform action based on subscription
- * @param {Object} user - User object with subscription info
- * @param {string} action - Action to check
- * @returns {boolean} True if allowed
+ * Handle Stripe webhook events
+ */
+const handleWebhook = async (payload, signature, webhookSecret) => {
+  try {
+    const stripe = getStripe();
+    
+    const event = stripe.webhooks.constructEvent(
+      payload,
+      signature,
+      webhookSecret
+    );
+    
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object;
+        const userId = session.metadata.userId;
+        const subscriptionType = session.metadata.subscriptionType;
+        
+        // Update user subscription in database
+        await User.findByIdAndUpdate(userId, {
+          'subscription.type': subscriptionType,
+          'subscription.startedAt': new Date(),
+          'subscription.expiresAt': null, // Subscription doesn't expire
+          'subscription.stripeSubscriptionId': session.subscription,
+          'subscription.status': 'active'
+        });
+        
+        console.log(`Subscription activated for user ${userId}: ${subscriptionType}`);
+        break;
+      }
+      
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object;
+        const customerId = subscription.customer;
+        
+        // Find user by Stripe customer ID
+        const user = await User.findOne({ stripeCustomerId: customerId });
+        if (user) {
+          const priceId = subscription.items.data[0].price.id;
+          const plan = Object.values(SUBSCRIPTION_PLANS).find(
+            plan => plan.priceId === priceId
+          );
+          
+          await User.findByIdAndUpdate(user._id, {
+            'subscription.type': plan?.id || 'unknown',
+            'subscription.status': subscription.status,
+            'subscription.stripeSubscriptionId': subscription.id
+          });
+        }
+        break;
+      }
+      
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object;
+        const customerId = subscription.customer;
+        
+        // Find user and downgrade to free
+        const user = await User.findOne({ stripeCustomerId: customerId });
+        if (user) {
+          await User.findByIdAndUpdate(user._id, {
+            'subscription.type': 'free',
+            'subscription.status': 'canceled',
+            'subscription.stripeSubscriptionId': null
+          });
+        }
+        break;
+      }
+      
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object;
+        const customerId = invoice.customer;
+        
+        // Find user and mark subscription as past due
+        const user = await User.findOne({ stripeCustomerId: customerId });
+        if (user) {
+          await User.findByIdAndUpdate(user._id, {
+            'subscription.status': 'past_due'
+          });
+          
+          // TODO: Send payment failure notification
+        }
+        break;
+      }
+      
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object;
+        const customerId = invoice.customer;
+        
+        // Find user and mark subscription as active
+        const user = await User.findOne({ stripeCustomerId: customerId });
+        if (user && user.subscription.status === 'past_due') {
+          await User.findByIdAndUpdate(user._id, {
+            'subscription.status': 'active'
+          });
+        }
+        break;
+      }
+    }
+    
+    return { success: true, event: event.type };
+  } catch (error) {
+    console.error('Error handling webhook:', error);
+    throw createError(
+      'Webhook handling failed',
+      400,
+      'WebhookError'
+    );
+  }
+};
+
+/**
+ * Check if user can perform an action based on subscription
  */
 const canPerformAction = (user, action) => {
-  const plan = SUBSCRIPTION_PLANS[user.subscription?.plan || 'free'];
+  const plan = SUBSCRIPTION_PLANS[user.subscription?.type || 'free'];
+  
+  if (!plan) {
+    return false;
+  }
   
   switch (action) {
     case 'upload_cv':
-      return (user.stats?.cvCount || 0) < plan.limits.maxCvUploads;
+      const usedUploads = user.usage?.cvUploads?.currentMonth?.count || 0;
+      return usedUploads < plan.limits.maxCvUploads;
       
     case 'use_voice_features':
       return plan.limits.voiceFeatures;
@@ -510,8 +509,8 @@ const canPerformAction = (user, action) => {
     case 'batch_process':
       return plan.limits.batchProcessing;
       
-    case 'export_data':
-      return user.subscription?.plan === 'premium';
+    case 'export_without_watermark':
+      return !plan.limits.watermarkExports;
       
     case 'priority_support':
       return plan.limits.prioritySupport;
@@ -522,74 +521,41 @@ const canPerformAction = (user, action) => {
 };
 
 /**
- * Get usage statistics for user
- * @param {Object} user - User object
- * @returns {Object} Usage statistics
+ * Get available plans
  */
-const getUsageStats = (user) => {
-  const plan = SUBSCRIPTION_PLANS[user.subscription?.plan || 'free'];
-  
-  return {
-    plan: plan.name,
-    cvUploads: {
-      used: user.stats?.cvCount || 0,
-      limit: plan.limits.maxCvUploads,
-      remaining: Math.max(0, plan.limits.maxCvUploads - (user.stats?.cvCount || 0))
-    },
-    analyses: {
-      used: user.stats?.analysisCount || 0,
-      limit: plan.limits.maxAnalyses,
-      remaining: Math.max(0, plan.limits.maxAnalyses - (user.stats?.analysisCount || 0))
-    },
-    features: {
-      voice: plan.limits.voiceFeatures,
-      batch: plan.limits.batchProcessing,
-      prioritySupport: plan.limits.prioritySupport,
-      maxFileSize: plan.limits.maxFileSize
-    },
-    subscription: user.subscription || {
-      plan: 'free',
-      status: 'active',
-      currentPeriodEnd: null
-    }
-  };
+const getAvailablePlans = () => {
+  return Object.values(SUBSCRIPTION_PLANS).map(plan => ({
+    id: plan.id,
+    name: plan.name,
+    description: plan.description,
+    monthlyPrice: plan.monthlyPrice,
+    features: plan.features,
+    limits: plan.limits,
+    priceId: plan.priceId,
+    isConfigured: !!plan.priceId || plan.id === 'free'
+  }));
 };
 
 /**
- * Handle Stripe webhook events
- * @param {string} payload - Raw webhook payload
- * @param {string} signature - Stripe signature
- * @param {string} secret - Webhook secret
- * @returns {Promise<Object>} Webhook event
+ * Get plan by ID
  */
-const handleWebhook = async (payload, signature, secret) => {
-  try {
-    const event = stripe.webhooks.constructEvent(payload, signature, secret);
-    return event;
-  } catch (error) {
-    throw createError(`Webhook error: ${error.message}`, 400, 'ValidationError');
-  }
+const getPlanById = (planId) => {
+  return SUBSCRIPTION_PLANS[planId] || SUBSCRIPTION_PLANS.free;
 };
 
 module.exports = {
-  createOrRetrieveCustomer,
-  getCustomer,
-  updateCustomer,
+  getStripe,
+  isStripeConfigured,
+  createCustomer,
   createCheckoutSession,
   createPortalSession,
   getSubscription,
   cancelSubscription,
+  reactivateSubscription,
   updateSubscription,
-  getCustomerSubscriptions,
-  getCustomerPaymentMethods,
-  createPaymentIntent,
-  getInvoice,
-  getCustomerInvoices,
-  createUsageRecord,
-  getSubscriptionPlans,
-  getPlan,
-  canPerformAction,
-  getUsageStats,
   handleWebhook,
-  stripe
+  canPerformAction,
+  getAvailablePlans,
+  getPlanById,
+  SUBSCRIPTION_PLANS
 };
