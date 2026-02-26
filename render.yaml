@@ -5,7 +5,7 @@ services:
     region: frankfurt
     plan: free
     buildCommand: npm install --omit=dev
-    startCommand: node server-mongodb.js
+    startCommand: node server-light.js
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
@@ -14,13 +14,3 @@ services:
         generateValue: true
       - key: CORS_ORIGIN
         value: https://cvoptima.vercel.app
-      - key: MONGODB_URI
-        fromDatabase:
-          name: cvoptima-mongodb
-          property: connectionString
-
-databases:
-  - name: cvoptima-mongodb
-    databaseName: cvoptima
-    plan: free
-    region: frankfurt
