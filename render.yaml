@@ -7,16 +7,10 @@ services:
     buildCommand: npm install --omit=dev
     startCommand: node server-light.js
     healthCheckPath: /health
-    disk:
-      name: cvoptima-uploads
-      mountPath: /opt/render/uploads
-      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 3002
       - key: CORS_ORIGIN
-        value: https://cvoptima.vercel.app,http://localhost:3001
-      - key: UPLOADS_DIR
-        value: /opt/render/uploads
+        value: https://cvoptima.vercel.app
