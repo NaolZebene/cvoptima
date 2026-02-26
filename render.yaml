@@ -14,3 +14,5 @@ services:
         generateValue: true
       - key: CORS_ORIGIN
         value: https://cvoptima.vercel.app
+      - key: MONGODB_URI
+        sync: false  # Will be set manually
