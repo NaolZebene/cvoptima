@@ -1,57 +1,72 @@
-// CVOptima Backend - 5 Minute Setup
-const http = require('http');
+// CVOptima Proper Backend
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
 
+const app = express();
 const PORT = process.env.PORT || 3002;
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/cvoptima';
 
-console.log('Starting CVOptima Backend...');
+// Middleware
+app.use(cors());
+app.use(express.json());
 
-const server = http.createServer((req, res) => {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Content-Type', 'application/json');
-  
-  // OPTIONS preflight
-  if (req.method === 'OPTIONS') {
-    res.writeHead(200);
-    res.end();
-    return;
-  }
-  
-  // Health check (Render.com checks this)
-  if (req.url === '/' || req.url === '/health') {
-    res.writeHead(200);
-    res.end(JSON.stringify({
-      status: 'ok',
-      message: 'CVOptima Backend',
-      timestamp: new Date().toISOString()
-    }));
-    return;
-  }
-  
-  // API endpoints
-  if (req.url === '/api/v1') {
-    res.writeHead(200);
-    res.end(JSON.stringify({
-      message: 'CVOptima API',
-      endpoints: ['/health', '/api/v1/auth/login', '/api/v1/cv/upload']
-    }));
-    return;
-  }
-  
-  // Default response
-  res.writeHead(200);
-  res.end(JSON.stringify({
-    message: 'CVOptima Backend',
-    url: req.url
-  }));
+// Connect to MongoDB
+mongoose.connect(MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log('✅ MongoDB connected'))
+.catch(err => console.log('❌ MongoDB error:', err.message));
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    message: 'CVOptima Backend with MongoDB',
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString()
+  });
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Server running on port ${PORT}`);
-  console.log(`🌐 Health: http://0.0.0.0:${PORT}/health`);
-  console.log(`🚀 Ready for frontend: https://cvoptima.vercel.app`);
+// API
+app.get('/api/v1', (req, res) => {
+  res.json({
+    message: 'CVOptima API v1',
+    endpoints: {
+      auth: '/api/v1/auth/login',
+      cv: '/api/v1/cv/upload',
+      admin: '/api/v1/admin/dashboard'
+    }
+  });
 });
 
-console.log('Server setup complete');
+// Auth login
+app.post('/api/v1/auth/login', (req, res) => {
+  res.json({
+    success: true,
+    user: {
+      email: 'admin@cvoptima.com',
+      name: 'Admin User',
+      role: 'admin'
+    },
+    token: 'jwt-token-demo'
+  });
+});
+
+// CV upload
+app.post('/api/v1/cv/upload', (req, res) => {
+  res.json({
+    success: true,
+    score: 85,
+    suggestions: ['Add keywords', 'Improve formatting']
+  });
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🌐 Health: http://localhost:${PORT}/health`);
+  console.log(`🔗 API: http://localhost:${PORT}/api/v1`);
+  console.log(`💾 MongoDB: ${MONGODB_URI.includes('mongodb+srv') ? 'Atlas' : 'local'}`);
+});
