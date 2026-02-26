@@ -4,14 +4,20 @@ const app = express();
 
 const PORT = process.env.PORT || 3002;
 
+// Log the port we're using
+console.log(`🔧 PORT from environment: ${process.env.PORT || 'not set (using 3002)'}`);
+console.log(`🔧 Server will use port: ${PORT}`);
+
 // 1. Root endpoint - responds IMMEDIATELY
 app.get('/', (req, res) => {
-  console.log('✅ Health check received from:', req.ip, req.headers['user-agent']);
+  console.log('✅ Health check received from:', req.ip, 'on port:', PORT);
+  console.log('✅ Request headers:', JSON.stringify(req.headers));
   res.json({ 
     status: 'healthy',
     timestamp: new Date().toISOString(),
     message: 'CVOptima Debug Server',
-    port: PORT,
+    actualPort: PORT,
+    envPort: process.env.PORT,
     node: process.version
   });
 });
