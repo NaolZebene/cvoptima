@@ -19,15 +19,31 @@ services:
           name: cvoptima-mongodb
           property: connectionString
       - key: CORS_ORIGIN
-        value: https://cvoptima.vercel.app,https://naolzebene.github.io
+        value: https://cvoptima.vercel.app,https://naolzebene.github.io,http://localhost:3001
       - key: DEEPSEEK_API_KEY
-        sync: false  # Will be set manually
+        value: YOUR_DEEPSEEK_API_KEY_HERE  # Get from https://platform.deepseek.com/api-keys
       - key: STRIPE_SECRET_KEY
-        sync: false  # Will be set manually
+        value: YOUR_STRIPE_SECRET_KEY_HERE  # Get from https://dashboard.stripe.com/test/apikeys
       - key: STRIPE_PUBLISHABLE_KEY
-        sync: false  # Will be set manually
+        value: YOUR_STRIPE_PUBLISHABLE_KEY_HERE  # Get from https://dashboard.stripe.com/test/apikeys
       - key: STRIPE_WEBHOOK_SECRET
-        sync: false  # Will be set manually
+        value: YOUR_STRIPE_WEBHOOK_SECRET_HERE  # Run: stripe listen --forward-to your-backend-url/api/v1/stripe/webhook
+      - key: STRIPE_BASIC_PRICE_ID
+        value: YOUR_BASIC_PLAN_PRICE_ID_HERE  # Create in Stripe dashboard
+      - key: STRIPE_PREMIUM_PRICE_ID
+        value: YOUR_PREMIUM_PLAN_PRICE_ID_HERE  # Create in Stripe dashboard
+      - key: BCRYPT_SALT_ROUNDS
+        value: "10"
+      - key: JWT_EXPIRE
+        value: 7d
+      - key: MAX_FILE_SIZE
+        value: "10485760"  # 10MB
+      - key: RATE_LIMIT_WINDOW_MS
+        value: "900000"  # 15 minutes
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: "100"
+      - key: LOG_LEVEL
+        value: info
 
 databases:
   - name: cvoptima-mongodb
