@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: cvoptima-backend-light
+    env: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install
+    startCommand: node server-light.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3002
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: https://cvoptima.vercel.app,http://localhost:3001
+      - key: MONGODB_URI
+        sync: false  # Optional - will use in-memory if not set
+
+databases:
+  - name: cvoptima-mongodb
+    databaseName: cvoptima
+    plan: free
+    region: frankfurt
+    ipAllowList: []  # Allow all IPs

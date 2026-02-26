@@ -1,0 +1,22 @@
+{
+  "name": "cvoptima-backend-minimal",
+  "version": "1.0.0",
+  "description": "Minimal CVOptima backend for Render.com deployment",
+  "main": "minimal-server.js",
+  "scripts": {
+    "start": "node minimal-server.js",
+    "dev": "nodemon minimal-server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^7.5.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

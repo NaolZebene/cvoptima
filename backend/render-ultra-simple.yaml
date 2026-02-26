@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: cvoptima-backend
+    env: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3002
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: https://cvoptima.vercel.app
+
+databases:
+  - name: cvoptima-mongodb
+    databaseName: cvoptima
+    plan: free
+    region: frankfurt

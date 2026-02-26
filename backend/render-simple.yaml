@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: cvoptima-backend-simple
+    env: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install --omit=dev
+    startCommand: node simple-server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3002
+      - key: JWT_SECRET
+        generateValue: true
+      - key: MONGODB_URI
+        value: mongodb://localhost:27017/cvoptima  # Will be replaced by Render
+      - key: CORS_ORIGIN
+        value: https://cvoptima.vercel.app
+
+databases:
+  - name: cvoptima-mongodb
+    databaseName: cvoptima
+    plan: free
+    region: frankfurt
