@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import toast from 'react-hot-toast';
+import { setTheme } from '../../store/slices/uiSlice';
 
 // Icons
 import {
@@ -20,6 +21,7 @@ import {
 } from '@heroicons/react/outline';
 
 const SettingsPage = () => {
+  const dispatch = useDispatch();
   const [activeTab, setActiveTab] = useState('profile');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -27,6 +29,7 @@ const SettingsPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   
   const { user } = useSelector((state) => state.auth);
+  const { theme } = useSelector((state) => state.ui);
 
   const tabs = [
     { id: 'profile', name: 'Profile', icon: UserIcon },
@@ -517,7 +520,16 @@ const SettingsPage = () => {
                         <div className="text-sm text-gray-500">Switch to dark theme</div>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" />
+                        <input 
+                          type="checkbox" 
+                          className="sr-only peer" 
+                          checked={theme === 'dark'}
+                          onChange={(e) => {
+                            const newTheme = e.target.checked ? 'dark' : 'light';
+                            dispatch(setTheme(newTheme));
+                            toast.success(`Switched to ${newTheme} mode`);
+                          }}
+                        />
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                       </label>
                     </div>

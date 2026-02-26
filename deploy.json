@@ -1,0 +1,32 @@
+{
+  "name": "CVOptima - AI-Powered CV Optimization",
+  "description": "Full-stack SaaS for CV optimization, ATS scoring, and job application tracking",
+  "repository": "https://github.com/NaolZebene/cvoptima",
+  "logo": "https://raw.githubusercontent.com/NaolZebene/cvoptima/main/frontend/public/logo192.png",
+  "keywords": ["react", "node", "cv", "ats", "job", "saas"],
+  "env": {
+    "REACT_APP_API_URL": {
+      "description": "Backend API URL (set to your Render backend URL after deployment)",
+      "value": "https://cvoptima-backend.onrender.com/api/v1"
+    },
+    "REACT_APP_ENVIRONMENT": {
+      "description": "Application environment",
+      "value": "production"
+    },
+    "REACT_APP_VERSION": {
+      "description": "Application version",
+      "value": "1.0.0"
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ],
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "free"
+    }
+  }
+}

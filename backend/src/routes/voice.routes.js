@@ -138,7 +138,7 @@ router.post(
 
 // Batch transcribe multiple audio files
 router.post(
-  '/batch-transcribe',
+  '/batch',
   authenticate,
   requireSubscription('premium'),
   uploadSingleAudio, // Note: For batch processing, you'd need uploadAudio.array('audio', 10)
